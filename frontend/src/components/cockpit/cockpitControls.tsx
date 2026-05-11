@@ -22,6 +22,17 @@ export const SIM_SKL_VIEWER_DOCK_Z = 'z-[110]'
 export const SIM_ACTION_ROW = 'flex flex-wrap items-center gap-1'
 export const SIM_CTL_H = 'h-8 min-h-[32px]'
 
+/** Tab strip for simulator panels (hull deck + SKL settings). */
+export const SIM_TAB_STRIP =
+  'flex w-full flex-wrap gap-0.5 rounded-xl border border-white/15 bg-black/50 p-0.5'
+export const SIM_TAB_BTN =
+  'min-h-[32px] flex-1 rounded-lg border border-transparent px-2 py-1.5 font-mono text-[clamp(9px,2.2vw,11px)] font-medium uppercase tracking-[0.06em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_85%,white)] transition-colors hover:bg-white/5 pointer-coarse:min-h-11 sm:min-h-9'
+export const SIM_TAB_BTN_ACTIVE =
+  'border-[color-mix(in_srgb,var(--color-mzk-plasma)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_18%,black)] text-[var(--color-mzk-reactor-white)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-silver)_12%,transparent)]'
+
+/** Alias for plan/readability — use with `SIM_TAB_BTN`. */
+export const SIM_TAB_ACTIVE = SIM_TAB_BTN_ACTIVE
+
 /** Matches hull viewer actuator easing — industrial snap. */
 export const COCKPIT_ACTUATOR_EASE =
   '[transition-timing-function:cubic-bezier(0.22,1,0.36,1)] duration-[var(--duration-mzk-short)]'
@@ -69,7 +80,7 @@ export function CockpitPrimaryActuator({
   return (
     <button
       type={type}
-      className={`rounded-xl border border-[color-mix(in_srgb,var(--color-mzk-photon-red-hot)_58%,transparent)] bg-gradient-to-r from-[color-mix(in_srgb,var(--color-mzk-photon-red)_94%,black)] to-[color-mix(in_srgb,var(--color-mzk-photon-red-deep)_98%,black)] px-6 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--color-mzk-reactor-white)] shadow-[0_0_36px_color-mix(in_srgb,var(--color-mzk-photon-red)_38%,transparent),inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-silver)_26%,transparent)] hover:brightness-110 disabled:opacity-45 ${COCKPIT_ACTUATOR_EASE} ${className}`}
+      className={`rounded-xl border border-[color-mix(in_srgb,var(--color-mzk-photon-red-hot)_58%,transparent)] bg-gradient-to-r from-[color-mix(in_srgb,var(--color-mzk-photon-red)_94%,black)] to-[color-mix(in_srgb,var(--color-mzk-photon-red-deep)_98%,black)] px-6 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--color-mzk-reactor-white)] shadow-[0_0_36px_color-mix(in_srgb,var(--color-mzk-photon-red)_38%,transparent),inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-silver)_26%,transparent)] hover:brightness-110 disabled:opacity-45 pointer-coarse:min-h-11 ${COCKPIT_ACTUATOR_EASE} ${className}`}
       {...rest}
     >
       {children}

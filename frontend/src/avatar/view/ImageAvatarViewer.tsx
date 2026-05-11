@@ -123,7 +123,7 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
                   aria-expanded={structureReportOpen}
                   onClick={() => setStructureReportOpen((v) => !v)}
                 >
-                  {structureReportOpen ? '▼' : '▶'} GLB structure report · same synced file
+                  {structureReportOpen ? '▼' : '▶'} GLB structure (inspector)
                 </button>
               </div>
               {structureReportOpen ?

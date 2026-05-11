@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react'
-import type { FormEvent } from 'react'
+import type { CSSProperties, FormEvent } from 'react'
+import { useEffect, useId, useState } from 'react'
 import type { AvatarPresentation } from '../../avatar/presentation'
 import type { MoveVisualKind, SklMovePlaybackSnapshot } from '../../avatar/presentation/types'
 import { ImageAvatarViewer } from '../../avatar/view/ImageAvatarViewer'
@@ -58,6 +58,17 @@ type CinematicCockpitProps = {
 export function CinematicCockpit(props: CinematicCockpitProps) {
   const avatarListening = props.avatarPresentation.listening
   const h = props.hud
+  const [controlsHelpOpen, setControlsHelpOpen] = useState(false)
+  const controlsHelpTitleId = useId()
+
+  useEffect(() => {
+    if (!controlsHelpOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setControlsHelpOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [controlsHelpOpen])
 
   const cockpitVars = {
     '--mzk-photon-01': clamp01(h?.photon_power_pct ?? 74),
@@ -162,6 +173,13 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
           </div>
 
           <div className="flex max-w-full flex-shrink-0 flex-wrap items-center justify-end gap-[clamp(0.35rem,1.5vw,0.6rem)] text-[clamp(9px,2.4vw,11px)]">
+            <button
+              type="button"
+              onClick={() => setControlsHelpOpen(true)}
+              className="rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_38%,transparent)] bg-[color-mix(in_srgb,black_72%,transparent)] px-2 py-1 font-mono uppercase tracking-[0.08em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)] hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_12%,black)] hover:text-[var(--color-mzk-reactor-white)] sm:px-2.5 sm:py-1.5"
+            >
+              Where are controls?
+            </button>
             <span
               className={`rounded-[2px] border px-2 py-1 font-mono uppercase tracking-[0.1em] sm:px-2.5 sm:py-1.5 sm:tracking-[0.12em] ${
                 props.wsStatus === 'open'
@@ -193,6 +211,51 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
           </div>
         </div>
       </header>
+
+      {controlsHelpOpen ?
+        <div
+          role="dialog"
+          aria-modal
+          aria-labelledby={controlsHelpTitleId}
+          className="fixed inset-0 z-[200] flex items-start justify-center p-4 pt-[min(12rem,18vh)] sm:pt-[min(10rem,14vh)]"
+        >
+          <button
+            type="button"
+            aria-label="Dismiss"
+            className="absolute inset-0 bg-black/70 backdrop-blur-[1px]"
+            onClick={() => setControlsHelpOpen(false)}
+          />
+          <div className="relative z-[1] w-full max-w-md rounded-2xl border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-black-plate)_96%,black)] p-4 font-mono text-[clamp(10px,2.5vw,12px)] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] shadow-[0_16px_48px_rgba(0,0,0,0.85)] ring-1 ring-black/60">
+            <h2
+              id={controlsHelpTitleId}
+              className="border-b border-white/15 pb-2 font-[family-name:var(--font-display)] text-[clamp(0.95rem,3vw,1.15rem)] font-semibold text-[var(--color-mzk-reactor-white)]"
+            >
+              Where are controls?
+            </h2>
+            <ul className="mt-3 list-inside list-disc space-y-2 leading-relaxed text-white/88">
+              <li>
+                <strong className="text-[var(--color-mzk-reactor-white)]">Kaiser command</strong> lives bottom-left:
+                directive, voice, and combat moves when you expand the deck.
+              </li>
+              <li>
+                <strong className="text-[var(--color-mzk-reactor-white)]">3D hull tools</strong> (fit, settings, debug)
+                anchor bottom-right on the SKL viewport.
+              </li>
+              <li>
+                <strong className="text-[var(--color-mzk-reactor-white)]">Twin & hull meters</strong> stay top-right
+                — open “Meters” to show the power bars beside the chips.
+              </li>
+            </ul>
+            <button
+              type="button"
+              className="mt-4 w-full rounded-lg border border-[color-mix(in_srgb,var(--color-mzk-plasma)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_14%,black)] px-3 py-2 text-[clamp(10px,2.4vw,11px)] font-semibold uppercase tracking-[0.14em] text-[var(--color-mzk-reactor-white)] hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_24%,black)] pointer-coarse:min-h-11"
+              onClick={() => setControlsHelpOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      : null}
 
       <main
         aria-label="Hull-based twin workspace"

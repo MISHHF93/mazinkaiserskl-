@@ -16,6 +16,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -50,7 +51,15 @@ import {
   type SklMaterialSurfaceId,
   type SklViewerExtSettings,
 } from './mazinkaiserGlbViewerSettings'
-import { CockpitPad, SIM_FLOAT_PANEL, SIM_SKL_VIEWER_DOCK_Z, ViewerIconButton } from '../../components/cockpit/cockpitControls'
+import {
+  CockpitPad,
+  SIM_FLOAT_PANEL,
+  SIM_SKL_VIEWER_DOCK_Z,
+  SIM_TAB_BTN,
+  SIM_TAB_BTN_ACTIVE,
+  SIM_TAB_STRIP,
+  ViewerIconButton,
+} from '../../components/cockpit/cockpitControls'
 import { SvgDebug, SvgDockCollapse, SvgExpand, SvgFit, SvgGear, SvgReset } from '../../components/cockpit/viewerToolbarIcons'
 import { fetchAndApplySklMoveArtifactsCove } from './sklArtifactCove'
 
@@ -893,6 +902,16 @@ function MissingPanel(props: { message: string; tried: string[] }) {
   )
 }
 
+type SklSettingsTab = 'view' | 'lighting' | 'material' | 'face' | 'debug'
+
+const SKL_SETTINGS_TABS: readonly { id: SklSettingsTab; label: string }[] = [
+  { id: 'view', label: 'View' },
+  { id: 'lighting', label: 'Light' },
+  { id: 'material', label: 'Mat' },
+  { id: 'face', label: 'Face' },
+  { id: 'debug', label: 'Debug' },
+] as const
+
 export function SKLModelViewer(props: {
   presentation: AvatarPresentation
   onHullState?: (s: HullViewportState) => void
@@ -917,8 +936,9 @@ export function SKLModelViewer(props: {
   }, [])
   const [modelReady, setModelReady] = useState(false)
   const [showDebugBounds, setShowDebugBounds] = useState(false)
-  const [debugOpen, setDebugOpen] = useState(false)
   const [toolbarOpen, setToolbarOpen] = useState(false)
+  const [sklSettingsTab, setSklSettingsTab] = useState<SklSettingsTab>('view')
+  const sklTabId = useId()
   /** Compact bottom-right dock (Fit + expand); expanded shows full toolbar + optional panels. */
   const [hullDockExpanded, setHullDockExpanded] = useState(false)
   const [gltfErr, setGltfErr] = useState<string | null>(null)
@@ -1040,6 +1060,20 @@ export function SKLModelViewer(props: {
     )
   }
 
+  const focusAdjacentSklTab = (dir: -1 | 1) => {
+    const order = SKL_SETTINGS_TABS.map((t) => t.id)
+    const i = order.indexOf(sklSettingsTab)
+    const next = (i + dir + order.length) % order.length
+    const nextId = order[next]!
+    setSklSettingsTab(nextId)
+    queueMicrotask(() => document.getElementById(`${sklTabId}-skl-tab-${nextId}`)?.focus())
+  }
+
+  const activateSklTab = (id: SklSettingsTab) => {
+    setSklSettingsTab(id)
+    queueMicrotask(() => document.getElementById(`${sklTabId}-skl-tab-${id}`)?.focus())
+  }
+
   const lightingNow: SklLightingPresetId = autoRecovery ? 'DIAGNOSTIC' : ext.lightingPreset
 
   return (
@@ -1107,235 +1141,306 @@ export function SKLModelViewer(props: {
               className="max-h-[min(40dvh,440px)] w-[min(calc(100vw-1rem),380px)] overflow-y-auto overscroll-contain rounded-xl border border-white/28 bg-[#070910]/96 p-2.5 font-mono text-[clamp(11px,2.6vw,13px)] leading-snug text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] shadow-[0_12px_36px_rgba(0,0,0,0.88)] ring-1 ring-black/70 backdrop-blur-md sm:p-3 sm:w-[min(calc(100vw-1.5rem),420px)]"
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <div className="mb-2 flex flex-wrap gap-1.5 border-b border-white/15 pb-2">
-                <CockpitPad className="text-[clamp(10px,2.4vw,11px)] px-2 py-1" onClick={resetViewerDefaults}>
-                  Reset prefs
-                </CockpitPad>
-              </div>
-              <details className="mb-2 rounded-md border border-white/10 bg-black/40">
-                <summary className="cursor-pointer px-2 py-1.5 text-[clamp(10px,2.4vw,11px)] uppercase tracking-[0.1em] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,white)] marker:content-none [&::-webkit-details-marker]:hidden">
-                  Orbit / pan / zoom help
-                </summary>
-                <p className="border-t border-white/10 px-2 py-1.5 text-[clamp(10px,2.5vw,12px)] leading-relaxed text-white/82">
-                  Drag on the hull (not the toolbar): <strong>left</strong> = orbit · <strong>right</strong> = pan ·{' '}
-                  <strong>wheel</strong> = zoom · <strong>double-click</strong> = pivot · middle = dolly · Reset = fit.
-                </p>
-              </details>
-            <div className="flex flex-wrap gap-1.5">
-              <CockpitPad className="text-[clamp(10px,2.4vw,11px)] px-2 py-1" onClick={() => fitRef.current?.()}>
-                Reset view
-              </CockpitPad>
-              <CockpitPad
-                className="text-[clamp(10px,2.4vw,11px)] px-2 py-1"
-                onClick={() => {
-                  setSettings((s) => ({ ...s, autoRotate: !s.autoRotate }))
+              <div
+                role="tablist"
+                aria-label="Viewer settings"
+                className={`${SIM_TAB_STRIP} mb-2 flex-nowrap overflow-x-auto`}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    focusAdjacentSklTab(1)
+                  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    focusAdjacentSklTab(-1)
+                  } else if (e.key === 'Home') {
+                    e.preventDefault()
+                    activateSklTab(SKL_SETTINGS_TABS[0]!.id)
+                  } else if (e.key === 'End') {
+                    e.preventDefault()
+                    activateSklTab(SKL_SETTINGS_TABS[SKL_SETTINGS_TABS.length - 1]!.id)
+                  }
                 }}
               >
-                Auto {settings.autoRotate ? 'off' : 'on'}
-              </CockpitPad>
-              <CockpitPad
-                className="text-[clamp(10px,2.4vw,11px)] px-2 py-1"
-                onClick={() => {
-                  setSettings((s) => ({ ...s, wireframe: !s.wireframe }))
-                }}
-              >
-                Wire
-              </CockpitPad>
-              <CockpitPad
-                className="text-[clamp(10px,2.4vw,11px)] px-2 py-1"
-                onClick={() => {
-                  setSettings((s) => ({ ...s, showGrid: !s.showGrid }))
-                }}
-              >
-                Grid
-              </CockpitPad>
-              <CockpitPad className="text-[clamp(10px,2.4vw,11px)] px-2 py-1" onClick={() => setShowDebugBounds((v) => !v)}>
-                Debug box
-              </CockpitPad>
-            </div>
-            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
-              Lighting
-              <select
-                className="min-h-[40px] w-full rounded-md border border-white/30 bg-neutral-950 px-2 py-1.5 text-[clamp(11px,2.6vw,13px)] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[36px]"
-                value={ext.lightingPreset}
-                onChange={(e) =>
-                  setExt((x) => ({ ...x, lightingPreset: e.target.value as SklLightingPresetId }))
-                }
-              >
-                <option value="DIAGNOSTIC">Diagnostic</option>
-                <option value="STUDIO">Studio</option>
-                <option value="SKL_COCKPIT">SKL cockpit</option>
-                <option value="INFERNO">Inferno</option>
-              </select>
-            </label>
-            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
-              Material
-              <select
-                className="min-h-[40px] w-full rounded-md border border-white/30 bg-neutral-950 px-2 py-1.5 text-[clamp(11px,2.6vw,13px)] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[36px]"
-                value={ext.materialSurface}
-                onChange={(e) =>
-                  setExt((x) => ({ ...x, materialSurface: e.target.value as SklMaterialSurfaceId }))
-                }
-              >
-                <option value="original">Original PBR</option>
-                <option value="clay">Debug clay</option>
-                <option value="wireframe">Wireframe (PBR)</option>
-                <option value="emissionBoost">Emission boost</option>
-              </select>
-            </label>
-            <label className="pointer-events-auto mt-2 flex flex-row flex-wrap items-start gap-2 text-[clamp(10px,2.5vw,12px)] leading-snug text-white/90">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-mzk-plasma)]"
-                checked={ext.eyeHighlight}
-                onChange={(e) => setExt((x) => ({ ...x, eyeHighlight: e.target.checked }))}
-              />
-              <span>
-                Eye pilot lamp — lifts emissive on meshes named eye / iris / pupil (see GLB nodes); adds soft face fill.
-              </span>
-            </label>
-            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
-              Eye lamp strength
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.02}
-                value={ext.eyeHighlightStrength}
-                disabled={!ext.eyeHighlight}
-                onChange={(e) =>
-                  setExt((x) => ({ ...x, eyeHighlightStrength: Number(e.target.value) }))
-                }
-                className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8 disabled:opacity-35"
-              />
-              <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
-                {ext.eyeHighlightStrength.toFixed(2)} · mesh boost + fill light
-              </span>
-            </label>
-            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
-              Hull yaw (twist toward camera / key light)
-              <input
-                type="range"
-                min={-24}
-                max={24}
-                step={0.5}
-                value={ext.heroYawDeg}
-                onChange={(e) => setExt((x) => ({ ...x, heroYawDeg: Number(e.target.value) }))}
-                className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8"
-              />
-              <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
-                {ext.heroYawDeg.toFixed(1)}° · deck-centered Y rotation
-              </span>
-            </label>
-            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
-              Exposure
-              <input
-                type="range"
-                min={0.4}
-                max={2.4}
-                step={0.02}
-                value={settings.exposure}
-                onChange={(e) => setSettings((s) => ({ ...s, exposure: Number(e.target.value) }))}
-                className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8"
-              />
-              <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">{settings.exposure.toFixed(2)} · ACES output</span>
-            </label>
-            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
-              Material env map ×
-              <input
-                type="range"
-                min={0}
-                max={2.5}
-                step={0.05}
-                value={settings.envMapStrength}
-                onChange={(e) => setSettings((s) => ({ ...s, envMapStrength: Number(e.target.value) }))}
-                className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8"
-              />
-              <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
-                {settings.envMapStrength.toFixed(2)} · per-mat envMapIntensity (HDR preset is separate)
-              </span>
-            </label>
-            <CockpitPad
-              className="mt-2 text-[clamp(10px,2.4vw,11px)] px-2 py-1"
-              onClick={() => {
-                setAutoRecovery(false)
-              }}
-            >
-              Clear auto-recovery
-            </CockpitPad>
-          </div>
-        ) : null}
-
-          {hullDockExpanded && debugOpen ? (
-            <div
-              className="max-h-[min(36dvh,400px)] w-[min(calc(100vw-1rem),380px)] overflow-y-auto overscroll-contain rounded-xl border border-white/28 bg-[#070910]/96 p-2.5 font-mono text-[clamp(10px,2.5vw,12px)] leading-relaxed text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] shadow-[0_12px_36px_rgba(0,0,0,0.88)] ring-1 ring-black/70 backdrop-blur-md sm:p-3 sm:w-[min(calc(100vw-1.5rem),400px)]"
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-            <p className="mb-2 border-b border-white/15 pb-2 text-[clamp(10px,2.5vw,11px)] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,white)]">
-              SKL model debug
-            </p>
-            <p className="break-all">Load URL: {res.url}</p>
-            <p>Canonical path: {collectKaiserGlbUrlCandidates()[0]}</p>
-            <p>
-              Loader (drei):{' '}
-              {glbProgress.active ?
-                `${Math.round(glbProgress.progress)}%${glbProgress.item ? ` · ${glbProgress.item}` : ''}`
-              : modelReady ?
-                'complete'
-              : 'idle'}
-            </p>
-            <p>Load success: {gltfErr ? 'no' : modelReady ? 'yes' : 'pending'}</p>
-            <p className="break-all">GLTF / parse error: {gltfErr ?? '—'}</p>
-            <p>Meshes: {digest?.meshCount ?? '—'}</p>
-            <p>Skinned meshes: {digest?.skinnedMeshCount ?? '—'}</p>
-            <p>Point clouds: {digest?.pointsCount ?? '—'}</p>
-            <p>Line objects: {digest?.lineLikeCount ?? '—'}</p>
-            <p>Non-PBR mesh slots: {digest?.nonPbrMaterialSlotCount ?? '—'}</p>
-            <p>Null material slots: {digest?.nullOrMissingMaterialSlots ?? '—'}</p>
-            <p>PBR missing snapshot: {digest?.pbrSlotsMissingMapSnap ?? '—'}</p>
-            <p>Materials: {digest?.materialCount ?? '—'}</p>
-            <p>Textures: {digest?.textureCount ?? '—'}</p>
-            <p>Animations: {digest?.animClipCount ?? '—'}</p>
-            <p>
-              SKL clip playback:{' '}
-              {(digest?.animClipCount ?? 0) === 0 ?
-                '0 clips — playback idle'
-              : movePlayback.phase === 'executing' ?
-                `executing · ${movePlayback.animationPlan.length} cue(s)`
-              : `idle (${movePlayback.phase})`}
-            </p>
-            <p className="break-all">Clips: {digest?.clipNames?.length ? digest.clipNames.join(', ') : '—'}</p>
-            <p>
-              Bounds size:{' '}
-              {digest ? digest.box.getSize(new THREE.Vector3()).toArray().map((n) => n.toFixed(3)).join(' × ') : '—'}
-            </p>
-            <p>Height (Y): {digest ? digest.heightY.toFixed(4) : '—'}</p>
-            <p>Max dim: {digest ? digest.maxDim.toFixed(4) : '—'}</p>
-            <p>Camera distance: {camInfo.distance.toFixed(3)}</p>
-            <p>Target: {camInfo.target.map((n) => n.toFixed(3)).join(', ')}</p>
-            <p>Lighting (effective): {lightingNow}</p>
-            <p>Material surface: {autoRecovery ? 'clay (recovery)' : ext.materialSurface}</p>
-            <p>Auto-recovery: {autoRecovery ? 'on' : 'off'}</p>
-            <p className="mt-3 border-t border-white/15 pt-2 text-[clamp(10px,2.5vw,11px)] uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,white)]">
-              Renderer / IBL
-            </p>
-            <p>IBL preset: {digest?.rendererReadout?.envPreset ?? '—'}</p>
-            <p>Scene env intensity: {digest?.rendererReadout?.sceneEnvironmentIntensity?.toFixed(3) ?? '—'}</p>
-            <p>Material env ×: {digest?.rendererReadout?.materialEnvMapMultiplier?.toFixed(3) ?? '—'}</p>
-            <p>
-              Tone / exposure: {digest?.rendererReadout?.toneMapping ?? '—'} @{' '}
-              {digest?.rendererReadout?.toneMappingExposure?.toFixed(3) ?? '—'}
-            </p>
-            <p>Output color space: {digest?.rendererReadout?.outputColorSpace ?? '—'}</p>
-            {digest?.warnings?.length ? (
-              <ul className="mt-2 list-inside list-disc text-[color-mix(in_srgb,var(--color-mzk-warning-flare)_90%,white)]">
-                {digest.warnings.map((w) => (
-                  <li key={w}>{w}</li>
+                {SKL_SETTINGS_TABS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    id={`${sklTabId}-skl-tab-${id}`}
+                    aria-selected={sklSettingsTab === id}
+                    tabIndex={sklSettingsTab === id ? 0 : -1}
+                    aria-controls={`${sklTabId}-skl-panel-${id}`}
+                    className={`${SIM_TAB_BTN} min-w-0 shrink text-[clamp(8px,2vw,10px)] sm:text-[clamp(9px,2.2vw,11px)] ${sklSettingsTab === id ? SIM_TAB_BTN_ACTIVE : ''}`}
+                    onClick={() => setSklSettingsTab(id)}
+                  >
+                    {label}
+                  </button>
                 ))}
-              </ul>
-            ) : null}
-          </div>
-        ) : null}
+              </div>
+
+              {sklSettingsTab === 'view' ?
+                <div
+                  role="tabpanel"
+                  id={`${sklTabId}-skl-panel-view`}
+                  aria-labelledby={`${sklTabId}-skl-tab-view`}
+                >
+                  <div className="mb-2 flex flex-wrap gap-1.5 border-b border-white/15 pb-2">
+                    <CockpitPad
+                      className="text-[clamp(10px,2.4vw,11px)] px-2 py-1 pointer-coarse:min-h-11"
+                      onClick={resetViewerDefaults}
+                    >
+                      Reset prefs
+                    </CockpitPad>
+                  </div>
+                  <details className="mb-2 rounded-md border border-white/10 bg-black/40">
+                    <summary className="cursor-pointer px-2 py-1.5 text-[clamp(10px,2.4vw,11px)] uppercase tracking-[0.1em] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,white)] marker:content-none [&::-webkit-details-marker]:hidden">
+                      Orbit / pan / zoom help
+                    </summary>
+                    <p className="border-t border-white/10 px-2 py-1.5 text-[clamp(10px,2.5vw,12px)] leading-relaxed text-white/82">
+                      Drag on the hull (not the toolbar): <strong>left</strong> = orbit · <strong>right</strong> = pan ·{' '}
+                      <strong>wheel</strong> = zoom · <strong>double-click</strong> = pivot · middle = dolly · Reset = fit.
+                    </p>
+                  </details>
+                  <div className="flex flex-wrap gap-1.5">
+                    <CockpitPad className="text-[clamp(10px,2.4vw,11px)] px-2 py-1 pointer-coarse:min-h-11" onClick={() => fitRef.current?.()}>
+                      Reset view
+                    </CockpitPad>
+                    <CockpitPad
+                      className="text-[clamp(10px,2.4vw,11px)] px-2 py-1 pointer-coarse:min-h-11"
+                      onClick={() => {
+                        setSettings((s) => ({ ...s, autoRotate: !s.autoRotate }))
+                      }}
+                    >
+                      Auto {settings.autoRotate ? 'off' : 'on'}
+                    </CockpitPad>
+                    <CockpitPad
+                      className="text-[clamp(10px,2.4vw,11px)] px-2 py-1 pointer-coarse:min-h-11"
+                      onClick={() => {
+                        setSettings((s) => ({ ...s, wireframe: !s.wireframe }))
+                      }}
+                    >
+                      Wire
+                    </CockpitPad>
+                    <CockpitPad
+                      className="text-[clamp(10px,2.4vw,11px)] px-2 py-1 pointer-coarse:min-h-11"
+                      onClick={() => {
+                        setSettings((s) => ({ ...s, showGrid: !s.showGrid }))
+                      }}
+                    >
+                      Grid
+                    </CockpitPad>
+                    <CockpitPad className="text-[clamp(10px,2.4vw,11px)] px-2 py-1 pointer-coarse:min-h-11" onClick={() => setShowDebugBounds((v) => !v)}>
+                      Debug box
+                    </CockpitPad>
+                  </div>
+                  <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
+                    Exposure
+                    <input
+                      type="range"
+                      min={0.4}
+                      max={2.4}
+                      step={0.02}
+                      value={settings.exposure}
+                      onChange={(e) => setSettings((s) => ({ ...s, exposure: Number(e.target.value) }))}
+                      className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8 pointer-coarse:min-h-10"
+                    />
+                    <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">{settings.exposure.toFixed(2)} · ACES output</span>
+                  </label>
+                </div>
+              : null}
+
+              {sklSettingsTab === 'lighting' ?
+                <div
+                  role="tabpanel"
+                  id={`${sklTabId}-skl-panel-lighting`}
+                  aria-labelledby={`${sklTabId}-skl-tab-lighting`}
+                >
+                  <label className="pointer-events-auto flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
+                    Lighting preset
+                    <select
+                      className="min-h-[40px] w-full rounded-md border border-white/30 bg-neutral-950 px-2 py-1.5 text-[clamp(11px,2.6vw,13px)] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[36px] pointer-coarse:min-h-11"
+                      value={ext.lightingPreset}
+                      onChange={(e) =>
+                        setExt((x) => ({ ...x, lightingPreset: e.target.value as SklLightingPresetId }))
+                      }
+                    >
+                      <option value="DIAGNOSTIC">Diagnostic</option>
+                      <option value="STUDIO">Studio</option>
+                      <option value="SKL_COCKPIT">SKL cockpit</option>
+                      <option value="INFERNO">Inferno</option>
+                    </select>
+                  </label>
+                </div>
+              : null}
+
+              {sklSettingsTab === 'material' ?
+                <div
+                  role="tabpanel"
+                  id={`${sklTabId}-skl-panel-material`}
+                  aria-labelledby={`${sklTabId}-skl-tab-material`}
+                >
+                  <label className="pointer-events-auto flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
+                    Material surface
+                    <select
+                      className="min-h-[40px] w-full rounded-md border border-white/30 bg-neutral-950 px-2 py-1.5 text-[clamp(11px,2.6vw,13px)] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[36px] pointer-coarse:min-h-11"
+                      value={ext.materialSurface}
+                      onChange={(e) =>
+                        setExt((x) => ({ ...x, materialSurface: e.target.value as SklMaterialSurfaceId }))
+                      }
+                    >
+                      <option value="original">Original PBR</option>
+                      <option value="clay">Debug clay</option>
+                      <option value="wireframe">Wireframe (PBR)</option>
+                      <option value="emissionBoost">Emission boost</option>
+                    </select>
+                  </label>
+                  <label className="pointer-events-auto mt-3 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
+                    Material env map ×
+                    <input
+                      type="range"
+                      min={0}
+                      max={2.5}
+                      step={0.05}
+                      value={settings.envMapStrength}
+                      onChange={(e) => setSettings((s) => ({ ...s, envMapStrength: Number(e.target.value) }))}
+                      className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8 pointer-coarse:min-h-10"
+                    />
+                    <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
+                      {settings.envMapStrength.toFixed(2)} · per-mat envMapIntensity (HDR preset is separate)
+                    </span>
+                  </label>
+                </div>
+              : null}
+
+              {sklSettingsTab === 'face' ?
+                <div role="tabpanel" id={`${sklTabId}-skl-panel-face`} aria-labelledby={`${sklTabId}-skl-tab-face`}>
+                  <label className="pointer-events-auto flex flex-row flex-wrap items-start gap-2 text-[clamp(10px,2.5vw,12px)] leading-snug text-white/90">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-mzk-plasma)]"
+                      checked={ext.eyeHighlight}
+                      onChange={(e) => setExt((x) => ({ ...x, eyeHighlight: e.target.checked }))}
+                    />
+                    <span>
+                      Eye pilot lamp — lifts emissive on meshes named eye / iris / pupil (see GLB nodes); adds soft face
+                      fill.
+                    </span>
+                  </label>
+                  <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
+                    Eye lamp strength
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.02}
+                      value={ext.eyeHighlightStrength}
+                      disabled={!ext.eyeHighlight}
+                      onChange={(e) =>
+                        setExt((x) => ({ ...x, eyeHighlightStrength: Number(e.target.value) }))
+                      }
+                      className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8 disabled:opacity-35 pointer-coarse:min-h-10"
+                    />
+                    <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
+                      {ext.eyeHighlightStrength.toFixed(2)} · mesh boost + fill light
+                    </span>
+                  </label>
+                  <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
+                    Hull yaw (twist toward camera / key light)
+                    <input
+                      type="range"
+                      min={-24}
+                      max={24}
+                      step={0.5}
+                      value={ext.heroYawDeg}
+                      onChange={(e) => setExt((x) => ({ ...x, heroYawDeg: Number(e.target.value) }))}
+                      className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8 pointer-coarse:min-h-10"
+                    />
+                    <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
+                      {ext.heroYawDeg.toFixed(1)}° · deck-centered Y rotation
+                    </span>
+                  </label>
+                </div>
+              : null}
+
+              {sklSettingsTab === 'debug' ?
+                <div role="tabpanel" id={`${sklTabId}-skl-panel-debug`} aria-labelledby={`${sklTabId}-skl-tab-debug`}>
+                  <div className="mb-2 border-b border-white/15 pb-2">
+                    <CockpitPad
+                      className="text-[clamp(10px,2.4vw,11px)] px-2 py-1 pointer-coarse:min-h-11"
+                      onClick={() => {
+                        setAutoRecovery(false)
+                      }}
+                    >
+                      Clear auto-recovery
+                    </CockpitPad>
+                  </div>
+                  <p className="mb-2 text-[clamp(10px,2.5vw,11px)] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,white)]">
+                    SKL model debug
+                  </p>
+                  <p className="break-all">Load URL: {res.url}</p>
+                  <p>Canonical path: {collectKaiserGlbUrlCandidates()[0]}</p>
+                  <p>
+                    Loader (drei):{' '}
+                    {glbProgress.active ?
+                      `${Math.round(glbProgress.progress)}%${glbProgress.item ? ` · ${glbProgress.item}` : ''}`
+                    : modelReady ?
+                      'complete'
+                    : 'idle'}
+                  </p>
+                  <p>Load success: {gltfErr ? 'no' : modelReady ? 'yes' : 'pending'}</p>
+                  <p className="break-all">GLTF / parse error: {gltfErr ?? '—'}</p>
+                  <p>Meshes: {digest?.meshCount ?? '—'}</p>
+                  <p>Skinned meshes: {digest?.skinnedMeshCount ?? '—'}</p>
+                  <p>Point clouds: {digest?.pointsCount ?? '—'}</p>
+                  <p>Line objects: {digest?.lineLikeCount ?? '—'}</p>
+                  <p>Non-PBR mesh slots: {digest?.nonPbrMaterialSlotCount ?? '—'}</p>
+                  <p>Null material slots: {digest?.nullOrMissingMaterialSlots ?? '—'}</p>
+                  <p>PBR missing snapshot: {digest?.pbrSlotsMissingMapSnap ?? '—'}</p>
+                  <p>Materials: {digest?.materialCount ?? '—'}</p>
+                  <p>Textures: {digest?.textureCount ?? '—'}</p>
+                  <p>Animations: {digest?.animClipCount ?? '—'}</p>
+                  <p>
+                    SKL clip playback:{' '}
+                    {(digest?.animClipCount ?? 0) === 0 ?
+                      '0 clips — playback idle'
+                    : movePlayback.phase === 'executing' ?
+                      `executing · ${movePlayback.animationPlan.length} cue(s)`
+                    : `idle (${movePlayback.phase})`}
+                  </p>
+                  <p className="break-all">Clips: {digest?.clipNames?.length ? digest.clipNames.join(', ') : '—'}</p>
+                  <p>
+                    Bounds size:{' '}
+                    {digest ? digest.box.getSize(new THREE.Vector3()).toArray().map((n) => n.toFixed(3)).join(' × ') : '—'}
+                  </p>
+                  <p>Height (Y): {digest ? digest.heightY.toFixed(4) : '—'}</p>
+                  <p>Max dim: {digest ? digest.maxDim.toFixed(4) : '—'}</p>
+                  <p>Camera distance: {camInfo.distance.toFixed(3)}</p>
+                  <p>Target: {camInfo.target.map((n) => n.toFixed(3)).join(', ')}</p>
+                  <p>Lighting (effective): {lightingNow}</p>
+                  <p>Material surface: {autoRecovery ? 'clay (recovery)' : ext.materialSurface}</p>
+                  <p>Auto-recovery: {autoRecovery ? 'on' : 'off'}</p>
+                  <p className="mt-3 border-t border-white/15 pt-2 text-[clamp(10px,2.5vw,11px)] uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,white)]">
+                    Renderer / IBL
+                  </p>
+                  <p>IBL preset: {digest?.rendererReadout?.envPreset ?? '—'}</p>
+                  <p>Scene env intensity: {digest?.rendererReadout?.sceneEnvironmentIntensity?.toFixed(3) ?? '—'}</p>
+                  <p>Material env ×: {digest?.rendererReadout?.materialEnvMapMultiplier?.toFixed(3) ?? '—'}</p>
+                  <p>
+                    Tone / exposure: {digest?.rendererReadout?.toneMapping ?? '—'} @{' '}
+                    {digest?.rendererReadout?.toneMappingExposure?.toFixed(3) ?? '—'}
+                  </p>
+                  <p>Output color space: {digest?.rendererReadout?.outputColorSpace ?? '—'}</p>
+                  {digest?.warnings?.length ?
+                    <ul className="mt-2 list-inside list-disc text-[color-mix(in_srgb,var(--color-mzk-warning-flare)_90%,white)]">
+                      {digest.warnings.map((w, wi) => (
+                        <li key={`${wi}-${w}`}>{w}</li>
+                      ))}
+                    </ul>
+                  : null}
+                </div>
+              : null}
+            </div>
+          ) : null}
 
           {!hullDockExpanded ?
             <div
@@ -1367,7 +1472,6 @@ export function SKLModelViewer(props: {
                 onClick={() => {
                   setHullDockExpanded(false)
                   setToolbarOpen(false)
-                  setDebugOpen(false)
                 }}
               >
                 <SvgDockCollapse />
@@ -1397,8 +1501,16 @@ export function SKLModelViewer(props: {
               <ViewerIconButton
                 className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!h-10 sm:!w-10 sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Model debug readout"
-                pressed={debugOpen}
-                onClick={() => setDebugOpen((v) => !v)}
+                pressed={toolbarOpen && sklSettingsTab === 'debug'}
+                onClick={() => {
+                  if (toolbarOpen && sklSettingsTab === 'debug') {
+                    setToolbarOpen(false)
+                    return
+                  }
+                  setHullDockExpanded(true)
+                  setToolbarOpen(true)
+                  setSklSettingsTab('debug')
+                }}
               >
                 <SvgDebug />
               </ViewerIconButton>
