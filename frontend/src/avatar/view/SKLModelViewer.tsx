@@ -1098,33 +1098,33 @@ export function SKLModelViewer(props: {
         </Canvas>
       </div>
 
-      <div className="pointer-events-none absolute bottom-0 right-0 z-[100] flex max-w-[calc(100vw-0.35rem)] flex-col items-end gap-2 pb-[max(0.35rem,env(safe-area-inset-bottom,0px))] pr-[max(0.35rem,env(safe-area-inset-right,0px))] pl-2 pt-2 sm:bottom-3 sm:right-3 lg:bottom-4 lg:right-4">
-        <div className="pointer-events-auto flex w-auto flex-col items-end gap-2">
+      <div className="pointer-events-none absolute bottom-0 right-0 z-[100] flex max-w-[calc(100vw-0.35rem)] flex-col items-end gap-1.5 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pr-[max(0.25rem,env(safe-area-inset-right,0px))] pl-1.5 pt-1.5 sm:bottom-2.5 sm:right-2.5 lg:bottom-3 lg:right-3">
+        <div className="pointer-events-auto flex w-auto flex-col items-end gap-1.5">
           {hullDockExpanded && toolbarOpen ? (
             <div
-              className="max-h-[min(58dvh,640px)] overflow-y-auto overscroll-contain rounded-2xl border-2 border-white/28 bg-[#070910]/96 p-4 font-mono text-[clamp(12px,3vw,14px)] leading-snug text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] shadow-[0_14px_48px_rgba(0,0,0,0.92)] ring-2 ring-black/70 backdrop-blur-md sm:p-4"
+              className="max-h-[min(40dvh,440px)] w-[min(calc(100vw-1rem),380px)] overflow-y-auto overscroll-contain rounded-xl border border-white/28 bg-[#070910]/96 p-2.5 font-mono text-[clamp(11px,2.6vw,13px)] leading-snug text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] shadow-[0_12px_36px_rgba(0,0,0,0.88)] ring-1 ring-black/70 backdrop-blur-md sm:p-3 sm:w-[min(calc(100vw-1.5rem),420px)]"
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <div className="mb-3 flex flex-wrap gap-2 border-b border-white/15 pb-3">
-                <CockpitPad className="text-[clamp(11px,2.6vw,12px)]" onClick={resetViewerDefaults}>
+              <div className="mb-2 flex flex-wrap gap-1.5 border-b border-white/15 pb-2">
+                <CockpitPad className="text-[clamp(10px,2.4vw,11px)] px-2 py-1" onClick={resetViewerDefaults}>
                   Reset prefs
                 </CockpitPad>
               </div>
-              <p className="mb-2 border-b border-white/15 pb-2 text-[clamp(11px,2.6vw,12px)] uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-silver)_92%,white)]">
-                Orbit · zoom · pan · reset
-              </p>
-              <p className="mb-3 rounded-lg bg-black/50 px-2 py-1.5 text-[clamp(11px,2.85vw,13px)] leading-relaxed text-white/85 ring-1 ring-white/10">
-                Drag on the hull (not the toolbar): <strong>left</strong> = orbit 360° around the target ·{' '}
-                <strong>right</strong> = pan · <strong>wheel</strong> = zoom (pivot moves to what is under the cursor) ·{' '}
-                <strong>double-click</strong> = pivot on that surface · middle button = dolly · Reset = fit + chest-height
-                pivot · Auto = turntable when enabled.
-              </p>
-            <div className="flex flex-wrap gap-2">
-              <CockpitPad className="text-[clamp(11px,2.6vw,12px)]" onClick={() => fitRef.current?.()}>
+              <details className="mb-2 rounded-md border border-white/10 bg-black/40">
+                <summary className="cursor-pointer px-2 py-1.5 text-[clamp(10px,2.4vw,11px)] uppercase tracking-[0.1em] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,white)] marker:content-none [&::-webkit-details-marker]:hidden">
+                  Orbit / pan / zoom help
+                </summary>
+                <p className="border-t border-white/10 px-2 py-1.5 text-[clamp(10px,2.5vw,12px)] leading-relaxed text-white/82">
+                  Drag on the hull (not the toolbar): <strong>left</strong> = orbit · <strong>right</strong> = pan ·{' '}
+                  <strong>wheel</strong> = zoom · <strong>double-click</strong> = pivot · middle = dolly · Reset = fit.
+                </p>
+              </details>
+            <div className="flex flex-wrap gap-1.5">
+              <CockpitPad className="text-[clamp(10px,2.4vw,11px)] px-2 py-1" onClick={() => fitRef.current?.()}>
                 Reset view
               </CockpitPad>
               <CockpitPad
-                className="text-[clamp(11px,2.6vw,12px)]"
+                className="text-[clamp(10px,2.4vw,11px)] px-2 py-1"
                 onClick={() => {
                   setSettings((s) => ({ ...s, autoRotate: !s.autoRotate }))
                 }}
@@ -1132,7 +1132,7 @@ export function SKLModelViewer(props: {
                 Auto {settings.autoRotate ? 'off' : 'on'}
               </CockpitPad>
               <CockpitPad
-                className="text-[clamp(11px,2.6vw,12px)]"
+                className="text-[clamp(10px,2.4vw,11px)] px-2 py-1"
                 onClick={() => {
                   setSettings((s) => ({ ...s, wireframe: !s.wireframe }))
                 }}
@@ -1140,21 +1140,21 @@ export function SKLModelViewer(props: {
                 Wire
               </CockpitPad>
               <CockpitPad
-                className="text-[clamp(11px,2.6vw,12px)]"
+                className="text-[clamp(10px,2.4vw,11px)] px-2 py-1"
                 onClick={() => {
                   setSettings((s) => ({ ...s, showGrid: !s.showGrid }))
                 }}
               >
                 Grid
               </CockpitPad>
-              <CockpitPad className="text-[clamp(11px,2.6vw,12px)]" onClick={() => setShowDebugBounds((v) => !v)}>
+              <CockpitPad className="text-[clamp(10px,2.4vw,11px)] px-2 py-1" onClick={() => setShowDebugBounds((v) => !v)}>
                 Debug box
               </CockpitPad>
             </div>
-            <label className="pointer-events-auto mt-3 flex flex-col gap-1 text-[clamp(12px,3vw,14px)] font-medium text-white/95">
+            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
               Lighting
               <select
-                className="min-h-[48px] w-full rounded-lg border-2 border-white/35 bg-neutral-950 px-3 py-2 text-[clamp(12px,3vw,14px)] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[40px] sm:py-2"
+                className="min-h-[40px] w-full rounded-md border border-white/30 bg-neutral-950 px-2 py-1.5 text-[clamp(11px,2.6vw,13px)] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[36px]"
                 value={ext.lightingPreset}
                 onChange={(e) =>
                   setExt((x) => ({ ...x, lightingPreset: e.target.value as SklLightingPresetId }))
@@ -1166,10 +1166,10 @@ export function SKLModelViewer(props: {
                 <option value="INFERNO">Inferno</option>
               </select>
             </label>
-            <label className="pointer-events-auto mt-3 flex flex-col gap-1 text-[clamp(12px,3vw,14px)] font-medium text-white/95">
+            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
               Material
               <select
-                className="min-h-[48px] w-full rounded-lg border-2 border-white/35 bg-neutral-950 px-3 py-2 text-[clamp(12px,3vw,14px)] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[40px] sm:py-2"
+                className="min-h-[40px] w-full rounded-md border border-white/30 bg-neutral-950 px-2 py-1.5 text-[clamp(11px,2.6vw,13px)] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[36px]"
                 value={ext.materialSurface}
                 onChange={(e) =>
                   setExt((x) => ({ ...x, materialSurface: e.target.value as SklMaterialSurfaceId }))
@@ -1181,10 +1181,10 @@ export function SKLModelViewer(props: {
                 <option value="emissionBoost">Emission boost</option>
               </select>
             </label>
-            <label className="pointer-events-auto mt-3 flex flex-row flex-wrap items-start gap-3 text-[clamp(12px,3vw,14px)] leading-snug text-white/92">
+            <label className="pointer-events-auto mt-2 flex flex-row flex-wrap items-start gap-2 text-[clamp(10px,2.5vw,12px)] leading-snug text-white/90">
               <input
                 type="checkbox"
-                className="mt-1 h-5 w-5 shrink-0 accent-[var(--color-mzk-plasma)]"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-mzk-plasma)]"
                 checked={ext.eyeHighlight}
                 onChange={(e) => setExt((x) => ({ ...x, eyeHighlight: e.target.checked }))}
               />
@@ -1192,7 +1192,7 @@ export function SKLModelViewer(props: {
                 Eye pilot lamp — lifts emissive on meshes named eye / iris / pupil (see GLB nodes); adds soft face fill.
               </span>
             </label>
-            <label className="pointer-events-auto mt-3 flex flex-col gap-1 text-[clamp(12px,3vw,14px)] font-medium text-white/95">
+            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
               Eye lamp strength
               <input
                 type="range"
@@ -1204,13 +1204,13 @@ export function SKLModelViewer(props: {
                 onChange={(e) =>
                   setExt((x) => ({ ...x, eyeHighlightStrength: Number(e.target.value) }))
                 }
-                className="h-12 w-full accent-[var(--color-mzk-plasma)] sm:h-10 disabled:opacity-35"
+                className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8 disabled:opacity-35"
               />
               <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
                 {ext.eyeHighlightStrength.toFixed(2)} · mesh boost + fill light
               </span>
             </label>
-            <label className="pointer-events-auto mt-3 flex flex-col gap-1 text-[clamp(12px,3vw,14px)] font-medium text-white/95">
+            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
               Hull yaw (twist toward camera / key light)
               <input
                 type="range"
@@ -1219,13 +1219,13 @@ export function SKLModelViewer(props: {
                 step={0.5}
                 value={ext.heroYawDeg}
                 onChange={(e) => setExt((x) => ({ ...x, heroYawDeg: Number(e.target.value) }))}
-                className="h-12 w-full accent-[var(--color-mzk-plasma)] sm:h-10"
+                className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8"
               />
               <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
                 {ext.heroYawDeg.toFixed(1)}° · deck-centered Y rotation
               </span>
             </label>
-            <label className="pointer-events-auto mt-3 flex flex-col gap-1 text-[clamp(12px,3vw,14px)] font-medium text-white/95">
+            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
               Exposure
               <input
                 type="range"
@@ -1234,11 +1234,11 @@ export function SKLModelViewer(props: {
                 step={0.02}
                 value={settings.exposure}
                 onChange={(e) => setSettings((s) => ({ ...s, exposure: Number(e.target.value) }))}
-                className="h-12 w-full accent-[var(--color-mzk-plasma)] sm:h-10"
+                className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8"
               />
               <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">{settings.exposure.toFixed(2)} · ACES output</span>
             </label>
-            <label className="pointer-events-auto mt-3 flex flex-col gap-1 text-[clamp(12px,3vw,14px)] font-medium text-white/95">
+            <label className="pointer-events-auto mt-2 flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
               Material env map ×
               <input
                 type="range"
@@ -1247,14 +1247,14 @@ export function SKLModelViewer(props: {
                 step={0.05}
                 value={settings.envMapStrength}
                 onChange={(e) => setSettings((s) => ({ ...s, envMapStrength: Number(e.target.value) }))}
-                className="h-12 w-full accent-[var(--color-mzk-plasma)] sm:h-10"
+                className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8"
               />
               <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
                 {settings.envMapStrength.toFixed(2)} · per-mat envMapIntensity (HDR preset is separate)
               </span>
             </label>
             <CockpitPad
-              className="mt-4 text-[clamp(11px,2.6vw,12px)]"
+              className="mt-2 text-[clamp(10px,2.4vw,11px)] px-2 py-1"
               onClick={() => {
                 setAutoRecovery(false)
               }}
@@ -1266,7 +1266,7 @@ export function SKLModelViewer(props: {
 
           {hullDockExpanded && debugOpen ? (
             <div
-              className="max-h-[min(52dvh,560px)] w-full overflow-y-auto overscroll-contain rounded-2xl border-2 border-white/28 bg-[#070910]/96 p-4 font-mono text-[clamp(11px,2.85vw,13px)] leading-relaxed text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] shadow-[0_14px_48px_rgba(0,0,0,0.92)] ring-2 ring-black/70 backdrop-blur-md sm:p-4"
+              className="max-h-[min(36dvh,400px)] w-[min(calc(100vw-1rem),380px)] overflow-y-auto overscroll-contain rounded-xl border border-white/28 bg-[#070910]/96 p-2.5 font-mono text-[clamp(10px,2.5vw,12px)] leading-relaxed text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] shadow-[0_12px_36px_rgba(0,0,0,0.88)] ring-1 ring-black/70 backdrop-blur-md sm:p-3 sm:w-[min(calc(100vw-1.5rem),400px)]"
               onPointerDown={(e) => e.stopPropagation()}
             >
             <p className="mb-2 border-b border-white/15 pb-2 text-[clamp(10px,2.5vw,11px)] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,white)]">
@@ -1337,29 +1337,30 @@ export function SKLModelViewer(props: {
 
           {!hullDockExpanded ?
             <div
-              className="flex gap-0.5 rounded-2xl border border-white/22 bg-[#070910]/92 p-0.5 shadow-[0_6px_32px_rgba(0,0,0,0.88)] ring-1 ring-black/65 backdrop-blur-md"
+              className="flex gap-0.5 rounded-xl border border-white/22 bg-[#070910]/92 p-0.5 shadow-[0_6px_28px_rgba(0,0,0,0.85)] ring-1 ring-black/65 backdrop-blur-md"
               onPointerDown={(e) => e.stopPropagation()}
             >
               <ViewerIconButton
-                className="!h-10 !w-10 !min-h-[40px] !min-w-[40px] sm:!min-h-[44px] sm:!min-w-[44px]"
+                className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Fit hull in view"
                 onClick={() => fitRef.current?.()}
               >
                 <SvgFit />
               </ViewerIconButton>
               <ViewerIconButton
-                className="!h-10 !w-10 !min-h-[40px] !min-w-[40px] sm:!min-h-[44px] sm:!min-w-[44px]"
+                className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Expand hull toolbar"
                 onClick={() => setHullDockExpanded(true)}
               >
                 <SvgGear />
               </ViewerIconButton>
             </div>
-          : <div
-              className="flex flex-wrap justify-end gap-1.5 rounded-2xl border-2 border-white/28 bg-[#070910]/94 p-1.5 shadow-[0_8px_40px_rgba(0,0,0,0.9)] ring-2 ring-black/75 backdrop-blur-md"
+          :             <div
+              className="flex flex-wrap justify-end gap-1 rounded-xl border border-white/25 bg-[#070910]/94 p-1 shadow-[0_6px_28px_rgba(0,0,0,0.85)] ring-1 ring-black/70 backdrop-blur-md"
               onPointerDown={(e) => e.stopPropagation()}
             >
               <ViewerIconButton
+                className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!h-10 sm:!w-10 sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Collapse hull toolbar"
                 onClick={() => {
                   setHullDockExpanded(false)
@@ -1369,19 +1370,38 @@ export function SKLModelViewer(props: {
               >
                 <SvgDockCollapse />
               </ViewerIconButton>
-              <ViewerIconButton label="Hull viewer settings" pressed={toolbarOpen} onClick={() => setToolbarOpen((v) => !v)}>
+              <ViewerIconButton
+                className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!h-10 sm:!w-10 sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
+                label="Hull viewer settings"
+                pressed={toolbarOpen}
+                onClick={() => setToolbarOpen((v) => !v)}
+              >
                 <SvgGear />
               </ViewerIconButton>
-              <ViewerIconButton label="Fit hull in view" onClick={() => fitRef.current?.()}>
+              <ViewerIconButton
+                className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!h-10 sm:!w-10 sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
+                label="Fit hull in view"
+                onClick={() => fitRef.current?.()}
+              >
                 <SvgFit />
               </ViewerIconButton>
-              <ViewerIconButton label="Reset viewer defaults" onClick={resetViewerDefaults}>
+              <ViewerIconButton
+                className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!h-10 sm:!w-10 sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
+                label="Reset viewer defaults"
+                onClick={resetViewerDefaults}
+              >
                 <SvgReset />
               </ViewerIconButton>
-              <ViewerIconButton label="Model debug readout" pressed={debugOpen} onClick={() => setDebugOpen((v) => !v)}>
+              <ViewerIconButton
+                className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!h-10 sm:!w-10 sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
+                label="Model debug readout"
+                pressed={debugOpen}
+                onClick={() => setDebugOpen((v) => !v)}
+              >
                 <SvgDebug />
               </ViewerIconButton>
               <ViewerIconButton
+                className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!h-10 sm:!w-10 sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Fullscreen hull viewport"
                 onClick={() => void wrapRef.current?.requestFullscreen?.()}
               >
