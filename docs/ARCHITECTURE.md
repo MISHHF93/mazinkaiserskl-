@@ -68,6 +68,10 @@ flowchart TB
   OR --> LLM
 ```
 
+### Move batch → cockpit 3D (SKL)
+
+`DigitalTwinKernel.execute_move` produces a `MoveBatchReport` serialized as `move_batch` on **`POST /api/v1/cockpit/move-demo`** and on WebSocket **`move_event`**. The **`animation_plan`** array holds cue rows (`phase`, `hud_event`, `duration_ms`, `severity`, `payload`) consumed by the React app via `normalizeAnimationPlan` and passed to **`SklMoveAnimationPlayback`**, which selects `THREE.AnimationClip` names using `sklClipMapping`. If the shipped GLB has no matching clip names (or no clips), the hull may stay on idle animation while HUD/overlay state still reflects `MOVE_EXECUTING`—that is an **asset / mapping** gap, not an API null failure.
+
 ## Layers
 
 1. **Presentation** — React cockpit (HUD, avatar placeholder, command deck, move grid).

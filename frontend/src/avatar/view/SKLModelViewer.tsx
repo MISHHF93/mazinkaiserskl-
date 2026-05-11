@@ -556,6 +556,7 @@ const SKL_MOVE_PLAYBACK_IDLE: SklMovePlaybackSnapshot = {
   backendMoveId: null,
   animationPlan: [],
   executingStartedAtMs: null,
+  moveLabel: undefined,
 }
 
 type SklLoadedProps = {
@@ -583,10 +584,9 @@ function SklLoadedModel(props: SklLoadedProps) {
     onReady,
     onFit,
     onCamTelemetry,
-    presentation: _p,
+    presentation,
     movePlayback,
   } = props
-  void _p
 
   const onDigestRef = useRef(onDigest)
   const onReadyRef = useRef(onReady)
@@ -619,6 +619,29 @@ function SklLoadedModel(props: SklLoadedProps) {
   const surface: SklMaterialSurfaceId = autoRecovery ? 'clay' : ext.materialSurface
   /** Sketchfab-style studio uses mostly IBL — pull saturated rim lights down so spec Normals don't shimmer. */
   const rimLightMul = lighting === 'STUDIO' ? 0.26 : 1
+
+  /** Resonate hull lighting with `AvatarPresentation` (HUD / move narrative) alongside clip playback. */
+  const presLightMul = useMemo(() => {
+    const r = Math.min(1, Math.max(0, presentation.reactorGlow))
+    const n = Math.min(1, Math.max(0, presentation.novaCorona))
+    const od = Math.min(1, Math.max(0, presentation.overdriveSheen))
+    const al = Math.min(1, Math.max(0, presentation.alertShroud))
+    const eye = Math.min(1, Math.max(0, presentation.eyeGlow))
+    const cin = presentation.cinematicMove ? 1 : 0
+    const moveActive = movePlayback.phase !== 'idle' ? 1 : 0
+    const keyMul = 1 + 0.42 * r + 0.2 * n + 0.12 * od + 0.16 * cin + 0.06 * eye + 0.14 * moveActive - 0.09 * al
+    const rimExtra = 1 + 0.5 * n + 0.32 * r + 0.18 * od + 0.14 * cin + 0.12 * moveActive
+    const cockpitAccentMul = 1 + 0.38 * r + 0.32 * n + 0.22 * moveActive
+    return { keyMul, rimExtra, cockpitAccentMul }
+  }, [
+    presentation.reactorGlow,
+    presentation.novaCorona,
+    presentation.overdriveSheen,
+    presentation.alertShroud,
+    presentation.eyeGlow,
+    presentation.cinematicMove,
+    movePlayback.phase,
+  ])
 
   /** Scene IBL via drei Environment (Three.Scene.environmentIntensity) — separate from per-material envMapStrength. */
   const ibl = useMemo(() => {
@@ -796,13 +819,23 @@ function SklLoadedModel(props: SklLoadedProps) {
         ref={keyLightRef}
         castShadow
         position={[6, 10, 4]}
-        intensity={lighting === 'DIAGNOSTIC' ? 2.35 : lighting === 'STUDIO' ? 1.05 : 1.48}
+        intensity={
+          (lighting === 'DIAGNOSTIC' ? 2.35 : lighting === 'STUDIO' ? 1.05 : 1.48) * presLightMul.keyMul
+        }
         color="#ffffff"
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
       />
-      <directionalLight position={[-3, 2, -6]} intensity={1.1 * rimLightMul} color="#ff3355" />
-      <directionalLight position={[4, -1, 3]} intensity={0.85 * rimLightMul} color="#ffaa44" />
+      <directionalLight
+        position={[-3, 2, -6]}
+        intensity={1.1 * rimLightMul * presLightMul.rimExtra}
+        color="#ff3355"
+      />
+      <directionalLight
+        position={[4, -1, 3]}
+        intensity={0.85 * rimLightMul * presLightMul.rimExtra}
+        color="#ffaa44"
+      />
 
       {lighting === 'INFERNO' ? (
         <directionalLight position={[2, 14, 7]} intensity={0.55} color="#fff6ec" />
@@ -820,14 +853,14 @@ function SklLoadedModel(props: SklLoadedProps) {
         <>
           <pointLight
             position={[-4, 1, 3]}
-            intensity={lighting === 'INFERNO' ? 2.25 : 2.8}
+            intensity={(lighting === 'INFERNO' ? 2.25 : 2.8) * presLightMul.cockpitAccentMul}
             color="#ff2020"
             distance={28}
             decay={2}
           />
           <pointLight
             position={[4, 0, -2]}
-            intensity={lighting === 'INFERNO' ? 1.7 : 2}
+            intensity={(lighting === 'INFERNO' ? 1.7 : 2) * presLightMul.cockpitAccentMul}
             color="#ffcc44"
             distance={22}
             decay={2}

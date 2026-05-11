@@ -1,4 +1,5 @@
 import type { AnimationPlanCueWire } from '../presentation/types'
+import { labelToSlug } from '../presentation/moveVisualMap'
 
 /** Try these names when returning to idle bind pose (first match wins). */
 export const IDLE_CLIP_CANDIDATES = ['idle', 'Idle', 'TPose', 'T-Pose', 'BindPose', 'bind_pose'] as const
@@ -47,6 +48,58 @@ export function resetSklArtifactRegistriesForTests(): void {
   artifactAliasOverrides = {}
   artifactIdlePrelude = []
   artifactCuePatterns = []
+}
+
+/** REST `move_id` slug wins; during local charging uses `moveLabel → labelToSlug`. */
+export function deriveMoveSlug(backendMoveId: string | null | undefined, moveLabel?: string | null): string {
+  const id = backendMoveId?.trim()
+  if (id) return id
+  const lab = moveLabel?.trim()
+  return lab ? labelToSlug(lab) : ''
+}
+
+/**
+ * Prefer exact logical name on the GLB; then case-insensitive; then substring match on slug
+ * without separators (handles exporters like Armature_Rocket_Punch_Action).
+ */
+export function resolveClipAgainstAvailableNames(
+  clipNames: ReadonlySet<string>,
+  logical: string | null,
+  slugForFuzzy: string,
+): string | null {
+  if (logical && clipNames.has(logical)) return logical
+  if (logical) {
+    const lo = logical.toLowerCase()
+    for (const n of clipNames) {
+      if (n.toLowerCase() === lo) return n
+    }
+  }
+
+  const s = slugForFuzzy.toLowerCase().replace(/-/g, '')
+  if (!s || s.length < 2) return null
+
+  for (const n of clipNames) {
+    const nk = n.toLowerCase().replace(/[-_\s|.]/g, '')
+    if (nk.includes(s) || s.includes(nk)) return n
+  }
+
+  return null
+}
+
+export const SYNTH_CHARGE_CUE_FOR_SKL: AnimationPlanCueWire = {
+  phase: 'prep',
+  hud_event: 'avatar.system.phase_charge',
+  duration_ms: 1,
+  severity: 'warn',
+  payload: {},
+}
+
+export const SYNTH_COOLDOWN_CUE_FOR_SKL: AnimationPlanCueWire = {
+  phase: 'cooldown_hint',
+  hud_event: 'hud.actor.cooldown_ribbon',
+  duration_ms: 1,
+  severity: 'info',
+  payload: {},
 }
 
 function mapLogicalToExportedClipName(logical: string): string {

@@ -2,7 +2,14 @@ import { useFrame } from '@react-three/fiber'
 import { useLayoutEffect, useRef, type MutableRefObject, type RefObject } from 'react'
 import * as THREE from 'three'
 import type { AnimationPlanCueWire, SklMovePlaybackSnapshot } from '../presentation/types'
-import { pickIdleClipFromAnimations, resolveSklClipForCue } from './sklClipMapping'
+import {
+  deriveMoveSlug,
+  pickIdleClipFromAnimations,
+  resolveClipAgainstAvailableNames,
+  resolveSklClipForCue,
+  SYNTH_CHARGE_CUE_FOR_SKL,
+  SYNTH_COOLDOWN_CUE_FOR_SKL,
+} from './sklClipMapping'
 
 const FADE_SEC = 0.28
 
@@ -34,9 +41,23 @@ function resolvePlayingCue(plan: readonly AnimationPlanCueWire[], elapsedMs: num
   return plan[plan.length - 1]
 }
 
+function pickClipFromLogical(
+  clips: Map<string, THREE.AnimationClip>,
+  logical: string | null,
+  slug: string,
+  allowSlugAsClipName: boolean,
+): string | null {
+  const names = new Set(clips.keys())
+  const hit = resolveClipAgainstAvailableNames(names, logical, slug)
+  if (hit) return hit
+  if (allowSlugAsClipName && slug && clips.has(slug)) return slug
+  return null
+}
+
 /**
  * Drives `THREE.AnimationMixer` on the hull root from backend `animation_plan` cue timings.
- * Safe no-op when `animations.length === 0`.
+ * Wired to all move phases: charging (prep cue + label slug), executing (plan), cooldown (ribbon cue).
+ * Falls back to fuzzy clip names vs GLB exports when names differ from logical slugs.
  */
 export function SklMoveAnimationPlayback(props: {
   modelUrl: string
@@ -93,24 +114,45 @@ export function SklMoveAnimationPlayback(props: {
     if (clips.size === 0) return
 
     const pb = playbackRef.current
+    const slug = deriveMoveSlug(pb.backendMoveId, pb.moveLabel)
+    const idForResolve = slug || null
 
     let targetName: string | null = null
 
-    if (pb.phase !== 'executing' || pb.executingStartedAtMs == null) {
-      targetName = pickIdleClipFromAnimations(Array.from(clips.values()))
-    } else {
+    const idle = pickIdleClipFromAnimations(Array.from(clips.values()))
+
+    if (pb.phase === 'idle') {
+      targetName = idle
+    } else if (pb.phase === 'charging' && slug) {
+      const logical = resolveSklClipForCue(idForResolve, SYNTH_CHARGE_CUE_FOR_SKL)
+      targetName = pickClipFromLogical(clips, logical, slug, true)
+      if (!targetName) {
+        const execLogical = resolveSklClipForCue(idForResolve, {
+          phase: 'release',
+          hud_event: 'avatar.anim.execution_burst',
+          duration_ms: 1,
+          severity: 'critical',
+          payload: {},
+        })
+        targetName = pickClipFromLogical(clips, execLogical, slug, true)
+      }
+    } else if (pb.phase === 'cooldown' && slug) {
+      const logical = resolveSklClipForCue(idForResolve, SYNTH_COOLDOWN_CUE_FOR_SKL)
+      targetName = pickClipFromLogical(clips, logical, slug, true) ?? idle
+    } else if (pb.phase === 'executing' && pb.executingStartedAtMs != null) {
       const plan = pb.animationPlan
       if (plan.length === 0) {
-        targetName = pickIdleClipFromAnimations(Array.from(clips.values()))
+        targetName = idle
       } else {
         const elapsed = performance.now() - pb.executingStartedAtMs
         const cue = resolvePlayingCue(plan, elapsed)
         if (cue) {
-          targetName = resolveSklClipForCue(pb.backendMoveId, cue)
-          const slug = pb.backendMoveId?.trim()
-          if (!targetName && slug && clips.has(slug)) targetName = slug
+          const logical = resolveSklClipForCue(idForResolve, cue)
+          targetName = pickClipFromLogical(clips, logical, slug, true)
         }
       }
+    } else {
+      targetName = idle
     }
 
     if (!targetName) return

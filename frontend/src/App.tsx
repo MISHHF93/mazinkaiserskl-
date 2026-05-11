@@ -23,6 +23,18 @@ function matchesWakePrefix(text: string, prefixes: string[]): boolean {
   return prefixes.some((p) => p.trim() && t.startsWith(p.trim().toLowerCase()))
 }
 
+function coerceMoveAnimationPlan(raw: unknown): Record<string, unknown>[] {
+  return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : []
+}
+
+function warnAcceptedEmptyAnimationPlan(outcome: string | undefined, planLen: number, ctx: string) {
+  if (import.meta.env.DEV && outcome === 'accepted' && planLen === 0) {
+    console.warn(
+      `[cockpit] ${ctx}: move_batch accepted but animation_plan is empty — check MoveExecutionEngine / simulation.`,
+    )
+  }
+}
+
 type MoveLayerState = AvatarRuntimeCues['move']
 
 const INITIAL_MOVE: MoveLayerState = {
@@ -44,6 +56,10 @@ export default function App() {
   }, [])
 
   const [moveLayer, setMoveLayer] = useState<MoveLayerState>(INITIAL_MOVE)
+
+  /** WS inbound batches consult fresh phase — avoids stale `{charging | executing}` closure skips/doubles. */
+  const moveLayerRef = useRef(moveLayer)
+  moveLayerRef.current = moveLayer
 
   const [hudRest, setHudRest] = useState<MechaHudState | null>(null)
   const [mode, setMode] = useState<PersonalityMode>('KAISER_CORE_MODE')
@@ -69,10 +85,12 @@ export default function App() {
 
   const onInboundMoveBatch = useCallback(
     (batch: MoveBatchWire) => {
-      if (moveLayer.phase === 'charging' || moveLayer.phase === 'executing') return
+      const phase = moveLayerRef.current.phase
+      if (phase === 'charging' || phase === 'executing') return
 
       const slug = typeof batch.move_id === 'string' ? batch.move_id : null
-      const planRaw = batch.animation_plan ?? []
+      const planRaw = coerceMoveAnimationPlan(batch.animation_plan)
+      warnAcceptedEmptyAnimationPlan(batch.outcome, planRaw.length, 'WebSocket move_event')
       const labelHint = slug?.replace(/-/g, ' ') || 'Remote move'
       clearMoveTimers()
 
@@ -107,7 +125,7 @@ export default function App() {
         }, 420)
       }, execMs)
     },
-    [clearMoveTimers, moveLayer.phase],
+    [clearMoveTimers],
   )
 
   const wsHandlers = useMemo(() => ({ onInboundMoveBatch }), [onInboundMoveBatch])
@@ -281,7 +299,8 @@ export default function App() {
 
             const batch = res.move_batch as MoveBatchWire
             const slug = typeof batch.move_id === 'string' ? batch.move_id : null
-            const planRaw = batch.animation_plan ?? []
+            const planRaw = coerceMoveAnimationPlan(batch.animation_plan)
+            warnAcceptedEmptyAnimationPlan(batch.outcome, planRaw.length, 'REST move-demo')
             const refined: MoveVisualKind = resolveMoveVisualKind({
               backendMoveId: slug,
               label: moveLabel,
@@ -417,12 +436,14 @@ export default function App() {
       backendMoveId: moveLayer.backendMoveId ?? null,
       animationPlan: moveLayer.animationPlan,
       executingStartedAtMs: moveLayer.executingStartedAtMs,
+      moveLabel: moveLayer.label.trim() ? moveLayer.label : undefined,
     }),
     [
       moveLayer.phase,
       moveLayer.backendMoveId,
       moveLayer.animationPlan,
       moveLayer.executingStartedAtMs,
+      moveLayer.label,
     ],
   )
 

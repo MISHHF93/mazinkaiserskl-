@@ -35,6 +35,8 @@ export type SklMovePlaybackSnapshot = {
   animationPlan: readonly AnimationPlanCueWire[]
   /** `performance.now()` when `phase` became `executing` for this move; null otherwise. */
   executingStartedAtMs: number | null
+  /** Human-readable move title / grid label — derives clip slug during `charging` before `backendMoveId` exists. */
+  moveLabel?: string
 }
 
 /** Grouped cinematography hints derived from REST `animation_plan[].hud_event` prefixes. */

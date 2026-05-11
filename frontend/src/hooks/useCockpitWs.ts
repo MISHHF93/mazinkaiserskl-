@@ -134,8 +134,10 @@ export function useCockpitWs(handlers?: CockpitWsHandlers) {
             setAssistantStream((prev) => prev + msg.token)
           }
           if (msg.type === 'assistant_done') setAssistDone(true)
-        } catch {
-          /* ignore */
+        } catch (err) {
+          if (import.meta.env.DEV) {
+            console.warn('[cockpit-ws] dropped malformed or unhandled frame', err)
+          }
         }
       }
     },
