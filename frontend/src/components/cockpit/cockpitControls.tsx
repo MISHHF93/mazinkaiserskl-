@@ -1,8 +1,72 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
 
-/** Simulator / SKL viewport: shared floating chrome (hull deck + viewer rail). */
-export const SIM_FLOAT_PANEL =
-  'rounded-2xl border border-white/25 bg-[color-mix(in_srgb,#070910_94%,black)] shadow-[0_8px_32px_rgba(0,0,0,0.78)] ring-1 ring-black/55 backdrop-blur-md'
+/** Low-fill bezel — reads as machined HUD hull, not a floating OS window (hull deck + dock sheets). */
+export const SIM_HUD_BEZEL_PANEL =
+  'relative rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_28%,transparent)] bg-[color-mix(in_srgb,#03050c_76%,transparent)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-plasma-ice)_12%,transparent),0_6px_28px_rgba(0,0,0,0.55)] backdrop-blur-xl before:pointer-events-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[color-mix(in_srgb,var(--color-mzk-plasma)_35%,transparent)] before:to-transparent'
+
+/** @deprecated Prefer {@link SIM_HUD_BEZEL_PANEL}; kept as alias for existing imports. */
+export const SIM_FLOAT_PANEL = SIM_HUD_BEZEL_PANEL
+
+/** Bottom-left deck grip — mirrors corner bezel language of {@link HudActuatorCluster}. */
+export function HudDeckGrip({ children, className = '', ...rest }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      {...rest}
+      className={`relative flex flex-col gap-1 rounded-bl-[3px] border-b-2 border-l-2 border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_42%,transparent)] border-r-0 border-t-0 bg-[color-mix(in_srgb,#020308_62%,transparent)] px-2 py-1.5 pl-2.5 shadow-[inset_-1px_-1px_0_color-mix(in_srgb,var(--color-mzk-plasma)_8%,transparent)] backdrop-blur-md ${className}`}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-1 top-0 h-px w-6 bg-gradient-to-l from-transparent to-[color-mix(in_srgb,var(--color-mzk-plasma)_38%,transparent)]"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-0 h-2 w-2 border-b border-l border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_55%,transparent)]"
+      />
+      {children}
+    </div>
+  )
+}
+
+/** Right-grip actuator rail: icons sit on corner bezel without full card wrapping. */
+export function HudActuatorCluster({ children, className = '', ...rest }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      {...rest}
+      className={`relative flex flex-wrap items-center justify-end gap-0.5 rounded-br-[3px] border-b-2 border-r-2 border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_42%,transparent)] border-l-0 border-t-0 bg-[color-mix(in_srgb,#020308_62%,transparent)] py-1.5 pl-2 pr-1 shadow-[inset_1px_-1px_0_color-mix(in_srgb,var(--color-mzk-plasma)_8%,transparent)] backdrop-blur-md ${className}`}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-0 top-0 h-2 w-2 border-l border-t border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_55%,transparent)]"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 right-0 h-px w-8 bg-gradient-to-r from-transparent to-[color-mix(in_srgb,var(--color-mzk-plasma)_40%,transparent)]"
+      />
+      {children}
+    </div>
+  )
+}
+
+/** Wedge sheet anchored to cockpit corner (SKL settings) — reads as HUD extension, not a tablet modal. */
+export const SIM_HUD_POPOVER_SHEET = `${SIM_HUD_BEZEL_PANEL} max-h-[min(40dvh,440px)] w-[min(calc(100vw-1rem),380px)] overflow-y-auto overscroll-contain rounded-br-none border-b-[3px] border-b-[color-mix(in_srgb,var(--color-mzk-plasma)_38%,transparent)] p-2.5 font-mono text-[clamp(11px,2.6vw,13px)] leading-snug text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] sm:p-3 sm:w-[min(calc(100vw-1.5rem),420px)] after:pointer-events-none after:absolute after:left-0 after:right-0 after:top-0 after:z-[1] after:h-0.5 after:bg-gradient-to-r after:from-transparent after:via-[color-mix(in_srgb,var(--color-mzk-plasma)_45%,transparent)] after:to-transparent`
+
+/** Throttle-strip row: one machined segment for collapsed hull directive + primary fire. */
+export function HudSegmentRail({ children, className = '', ...rest }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      {...rest}
+      className={`flex min-h-0 w-full flex-wrap items-stretch gap-px rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_24%,transparent)] bg-[color-mix(in_srgb,black_68%,transparent)] p-px shadow-[inset_0_0_0_1px_rgba(0,0,0,0.55)] backdrop-blur-md ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+export const SIM_HUD_RANGE =
+  'h-3 w-full max-w-none cursor-pointer appearance-none rounded-none accent-[var(--color-mzk-plasma)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-mzk-plasma-ice)_18%,transparent)] [background:linear-gradient(90deg,transparent_0%,color-mix(in_srgb,var(--color-mzk-plasma)_20%,transparent)_50%,transparent_100%)] pointer-coarse:min-h-[2.75rem] sm:h-2.5 sm:pointer-coarse:min-h-10 [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-none [&::-webkit-slider-runnable-track]:border [&::-webkit-slider-runnable-track]:border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_15%,transparent)] [&::-webkit-slider-runnable-track]:bg-black/85 [&::-webkit-slider-thumb]:mt-[-3px] [&::-webkit-slider-thumb]:h-[18px] [&::-webkit-slider-thumb]:w-[7px] [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-[1px] [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_45%,white)] [&::-webkit-slider-thumb]:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,#0a0c12)] sm:[&::-webkit-slider-thumb]:mt-[-2px] sm:[&::-webkit-slider-thumb]:h-4 sm:[&::-webkit-slider-thumb]:w-2'
+
+export const SIM_HUD_SELECT =
+  'min-h-[40px] w-full rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_28%,transparent)] bg-[color-mix(in_srgb,#05070c_92%,black)] px-2 py-1.5 font-mono text-[clamp(11px,2.6vw,13px)] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_95%,white)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.65)] outline-none ring-offset-2 ring-offset-[#03050c] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[36px] pointer-coarse:min-h-11'
 
 /**
  * Anchors hull command deck bottom-left, reserving the bottom-right quadrant for the SKL
@@ -22,13 +86,13 @@ export const SIM_SKL_VIEWER_DOCK_Z = 'z-[110]'
 export const SIM_ACTION_ROW = 'flex flex-wrap items-center gap-1'
 export const SIM_CTL_H = 'h-8 min-h-[32px]'
 
-/** Tab strip for simulator panels (hull deck + SKL settings). */
+/** Segmented switch-bank tabs (hull deck + SKL settings). */
 export const SIM_TAB_STRIP =
-  'flex w-full flex-wrap gap-0.5 rounded-xl border border-white/15 bg-black/50 p-0.5'
+  'flex w-full flex-nowrap gap-px overflow-x-auto rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_22%,transparent)] bg-black/75 p-px shadow-[inset_0_0_0_1px_rgba(0,0,0,0.5)]'
 export const SIM_TAB_BTN =
-  'min-h-[32px] flex-1 rounded-lg border border-transparent px-2 py-1.5 font-mono text-[clamp(9px,2.2vw,11px)] font-medium uppercase tracking-[0.06em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_85%,white)] transition-colors hover:bg-white/5 pointer-coarse:min-h-11 sm:min-h-9'
+  'min-h-[32px] min-w-0 flex-1 px-2 py-1.5 font-mono text-[clamp(9px,2.2vw,11px)] font-semibold uppercase tracking-[0.08em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_78%,white)] transition-[color,background-color,box-shadow] hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_8%,black)] pointer-coarse:min-h-11 sm:min-h-9 first:rounded-l-[1px] last:rounded-r-[1px]'
 export const SIM_TAB_BTN_ACTIVE =
-  'border-[color-mix(in_srgb,var(--color-mzk-plasma)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_18%,black)] text-[var(--color-mzk-reactor-white)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-silver)_12%,transparent)]'
+  'bg-[color-mix(in_srgb,var(--color-mzk-plasma)_22%,#05070c)] text-[var(--color-mzk-reactor-white)] shadow-[inset_0_2px_0_color-mix(in_srgb,var(--color-mzk-silver)_14%,transparent),inset_0_-1px_0_rgba(0,0,0,0.5)]'
 
 /** Alias for plan/readability — use with `SIM_TAB_BTN`. */
 export const SIM_TAB_ACTIVE = SIM_TAB_BTN_ACTIVE
@@ -60,7 +124,7 @@ export function CockpitPad({
   return (
     <button
       type={type}
-      className={`rounded-lg px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] backdrop-blur-sm disabled:pointer-events-none disabled:opacity-40 sm:text-[11px] ${toneCls} ${COCKPIT_ACTUATOR_EASE} ${className}`}
+      className={`rounded-[3px] px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] backdrop-blur-sm active:translate-y-px disabled:pointer-events-none disabled:opacity-40 sm:text-[11px] [clip-path:polygon(0_3px,3px_0,calc(100%-3px)_0,100%_3px,100%_calc(100%-3px),calc(100%-3px)_100%,3px_100%,0_calc(100%-3px))] ${toneCls} ${COCKPIT_ACTUATOR_EASE} ${className}`}
       {...rest}
     >
       {children}
@@ -123,7 +187,7 @@ export function ViewerIconButton({
       aria-label={label}
       title={label}
       aria-pressed={pressed}
-      className={`touch-manipulation inline-flex h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 items-center justify-center rounded-xl border-2 border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_38%,transparent)] bg-[color-mix(in_srgb,#0f131c_96%,black)] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_96%,white)] shadow-[0_6px_28px_rgba(0,0,0,0.65)] ring-1 ring-black/60 backdrop-blur-md hover:bg-[color-mix(in_srgb,#151a24_98%,black)] hover:border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_52%,transparent)] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 [&_svg]:h-[22px] [&_svg]:w-[22px] sm:h-12 sm:w-12 sm:min-h-[48px] sm:min-w-[48px] sm:[&_svg]:h-6 sm:[&_svg]:w-6 ${pressed ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma)_58%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_24%,#0a0c10)] ring-2 ring-[color-mix(in_srgb,var(--color-mzk-plasma)_42%,transparent)]' : ''} ${COCKPIT_ACTUATOR_EASE} ${className}`}
+      className={`touch-manipulation inline-flex h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 items-center justify-center border-2 border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_42%,transparent)] bg-[color-mix(in_srgb,#080b12_94%,black)] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_96%,white)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-plasma-ice)_18%,transparent),0_4px_18px_rgba(0,0,0,0.7)] backdrop-blur-sm [clip-path:polygon(6px_0,100%_0,100%_calc(100%-8px),calc(100%-8px)_100%,0_100%,0_6px)] hover:border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_58%,transparent)] hover:bg-[color-mix(in_srgb,#0c1018_96%,black)] active:translate-y-px active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 [&_svg]:h-[22px] [&_svg]:w-[22px] sm:h-12 sm:w-12 sm:min-h-[48px] sm:min-w-[48px] sm:[&_svg]:h-6 sm:[&_svg]:w-6 ${pressed ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma)_62%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_22%,#060810)] shadow-[inset_0_0_12px_color-mix(in_srgb,var(--color-mzk-plasma)_25%,transparent),0_0_20px_color-mix(in_srgb,var(--color-mzk-plasma)_22%,transparent)]' : ''} ${COCKPIT_ACTUATOR_EASE} ${className}`}
       {...rest}
     >
       {children}

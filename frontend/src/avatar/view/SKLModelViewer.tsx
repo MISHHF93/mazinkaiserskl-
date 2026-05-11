@@ -53,7 +53,10 @@ import {
 } from './mazinkaiserGlbViewerSettings'
 import {
   CockpitPad,
-  SIM_FLOAT_PANEL,
+  HudActuatorCluster,
+  SIM_HUD_POPOVER_SHEET,
+  SIM_HUD_RANGE,
+  SIM_HUD_SELECT,
   SIM_SKL_VIEWER_DOCK_Z,
   SIM_TAB_BTN,
   SIM_TAB_BTN_ACTIVE,
@@ -1171,7 +1174,7 @@ export function SKLModelViewer(props: {
         <div className="pointer-events-auto flex w-auto flex-col items-end gap-1.5">
           {hullDockExpanded && toolbarOpen ? (
             <div
-              className="max-h-[min(40dvh,440px)] w-[min(calc(100vw-1rem),380px)] overflow-y-auto overscroll-contain rounded-xl border border-white/28 bg-[#070910]/96 p-2.5 font-mono text-[clamp(11px,2.6vw,13px)] leading-snug text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] shadow-[0_12px_36px_rgba(0,0,0,0.88)] ring-1 ring-black/70 backdrop-blur-md sm:p-3 sm:w-[min(calc(100vw-1.5rem),420px)]"
+              className={SIM_HUD_POPOVER_SHEET}
               onPointerDown={(e) => e.stopPropagation()}
             >
               <div
@@ -1225,7 +1228,7 @@ export function SKLModelViewer(props: {
                       Reset prefs
                     </CockpitPad>
                   </div>
-                  <details className="mb-2 rounded-md border border-white/10 bg-black/40">
+                  <details className="mb-2 rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_16%,transparent)] bg-[color-mix(in_srgb,black_45%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                     <summary className="cursor-pointer px-2 py-1.5 text-[clamp(10px,2.4vw,11px)] uppercase tracking-[0.1em] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,white)] marker:content-none [&::-webkit-details-marker]:hidden">
                       Orbit / pan / zoom help
                     </summary>
@@ -1275,7 +1278,7 @@ export function SKLModelViewer(props: {
                       step={0.02}
                       value={settings.exposure}
                       onChange={(e) => setSettings((s) => ({ ...s, exposure: Number(e.target.value) }))}
-                      className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8 pointer-coarse:min-h-10"
+                      className={`${SIM_HUD_RANGE} mt-0.5`}
                     />
                     <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">{settings.exposure.toFixed(2)} · ACES output</span>
                   </label>
@@ -1291,7 +1294,7 @@ export function SKLModelViewer(props: {
                   <label className="pointer-events-auto flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
                     Lighting preset
                     <select
-                      className="min-h-[40px] w-full rounded-md border border-white/30 bg-neutral-950 px-2 py-1.5 text-[clamp(11px,2.6vw,13px)] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[36px] pointer-coarse:min-h-11"
+                      className={SIM_HUD_SELECT}
                       value={ext.lightingPreset}
                       onChange={(e) =>
                         setExt((x) => ({ ...x, lightingPreset: e.target.value as SklLightingPresetId }))
@@ -1315,7 +1318,7 @@ export function SKLModelViewer(props: {
                   <label className="pointer-events-auto flex flex-col gap-0.5 text-[clamp(11px,2.6vw,13px)] font-medium text-white/95">
                     Material surface
                     <select
-                      className="min-h-[40px] w-full rounded-md border border-white/30 bg-neutral-950 px-2 py-1.5 text-[clamp(11px,2.6vw,13px)] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[36px] pointer-coarse:min-h-11"
+                      className={SIM_HUD_SELECT}
                       value={ext.materialSurface}
                       onChange={(e) =>
                         setExt((x) => ({ ...x, materialSurface: e.target.value as SklMaterialSurfaceId }))
@@ -1336,7 +1339,7 @@ export function SKLModelViewer(props: {
                       step={0.05}
                       value={settings.envMapStrength}
                       onChange={(e) => setSettings((s) => ({ ...s, envMapStrength: Number(e.target.value) }))}
-                      className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8 pointer-coarse:min-h-10"
+                      className={`${SIM_HUD_RANGE} mt-0.5`}
                     />
                     <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
                       {settings.envMapStrength.toFixed(2)} · per-mat envMapIntensity (HDR preset is separate)
@@ -1386,7 +1389,7 @@ export function SKLModelViewer(props: {
                       step={0.5}
                       value={ext.heroYawDeg}
                       onChange={(e) => setExt((x) => ({ ...x, heroYawDeg: Number(e.target.value) }))}
-                      className="h-9 w-full accent-[var(--color-mzk-plasma)] sm:h-8 pointer-coarse:min-h-10"
+                      className={`${SIM_HUD_RANGE} mt-0.5`}
                     />
                     <span className="text-[clamp(11px,2.85vw,13px)] text-white/75">
                       {ext.heroYawDeg.toFixed(1)}° · deck-centered Y rotation
@@ -1476,10 +1479,7 @@ export function SKLModelViewer(props: {
           ) : null}
 
           {!hullDockExpanded ?
-            <div
-              className={`${SIM_FLOAT_PANEL} flex gap-0.5 p-0.5`}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
+            <HudActuatorCluster className="gap-1 pr-2" onPointerDown={(e) => e.stopPropagation()}>
               <ViewerIconButton
                 className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Fit hull in view"
@@ -1494,11 +1494,8 @@ export function SKLModelViewer(props: {
               >
                 <SvgGear />
               </ViewerIconButton>
-            </div>
-          : <div
-              className={`${SIM_FLOAT_PANEL} flex flex-wrap justify-end gap-1 p-1`}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
+            </HudActuatorCluster>
+          : <HudActuatorCluster className="gap-1 pr-2" onPointerDown={(e) => e.stopPropagation()}>
               <ViewerIconButton
                 className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!h-10 sm:!w-10 sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Collapse hull toolbar"
@@ -1554,7 +1551,7 @@ export function SKLModelViewer(props: {
               >
                 <SvgExpand />
               </ViewerIconButton>
-            </div>
+            </HudActuatorCluster>
           }
         </div>
       </div>

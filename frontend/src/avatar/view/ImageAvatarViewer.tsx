@@ -63,6 +63,16 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
   }, [fixtureForceAbsent, structureReportOpen, viewportState, structureStatus])
 
   const shellVignetteClass = useMemo(() => {
+    const rnd = hullSurface ? 'rounded-lg' : 'rounded-3xl'
+    if (hullSurface) {
+      if (glbReady) {
+        return `pointer-events-none absolute inset-0 z-[11] ${rnd} [mask-image:radial-gradient(85%_75%_at_50%_115%,transparent_45%,black_88%)] bg-gradient-to-t from-black/18 via-transparent to-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_5%,transparent)]`
+      }
+      if (activePending) {
+        return `pointer-events-none absolute inset-0 z-[11] ${rnd} [mask-image:radial-gradient(85%_75%_at_50%_115%,transparent_45%,black_88%)] bg-gradient-to-t from-black/28 via-transparent to-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_7%,transparent)]`
+      }
+      return `pointer-events-none absolute inset-0 z-[11] ${rnd} [mask-image:radial-gradient(85%_75%_at_50%_115%,transparent_45%,black_88%)] bg-gradient-to-t from-black/38 via-transparent to-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_9%,transparent)]`
+    }
     if (glbReady) {
       return 'pointer-events-none absolute inset-0 z-[11] rounded-3xl bg-gradient-to-t from-black/12 via-transparent to-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_6%,transparent)]'
     }
@@ -70,7 +80,25 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
       return 'pointer-events-none absolute inset-0 z-[11] rounded-3xl bg-gradient-to-t from-black/22 via-transparent to-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_8%,transparent)]'
     }
     return 'pointer-events-none absolute inset-0 z-[11] rounded-3xl bg-gradient-to-t from-black/42 via-transparent to-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_11%,transparent)]'
-  }, [glbReady, activePending])
+  }, [glbReady, activePending, hullSurface])
+
+  const hullShellFrame = hullSurface ?
+      `relative rounded-lg border border-[color-mix(in_srgb,var(--color-mzk-plasma)_32%,transparent)] bg-[color-mix(in_srgb,#03040a_94%,black)] shadow-[inset_0_0_32px_color-mix(in_srgb,var(--color-mzk-plasma)_8%,transparent)] mx-0 flex h-full min-h-0 w-full flex-1 ${
+        p.semantic === 'COMBAT_READY' ?
+          'border-[color-mix(in_srgb,var(--color-mzk-gold)_38%,var(--color-mzk-photon-red)_14%)]'
+        : ''
+      }`
+    : `relative rounded-3xl border-2 bg-gradient-to-b from-[color-mix(in_srgb,var(--color-mzk-black-raised)_95%,black)] via-black to-[color-mix(in_srgb,var(--color-mzk-black)_88%,#04060c)] shadow-[inset_0_0_48px_color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] ring-1 ring-[color-mix(in_srgb,var(--color-mzk-silver)_14%,transparent)] ${
+        'relative mx-auto h-[min(54vh,600px)] min-h-[260px] max-h-[min(70vh,720px)] w-full'
+      } ${
+        p.semantic === 'COMBAT_READY' ?
+          'border-[color-mix(in_srgb,var(--color-mzk-gold)_34%,var(--color-mzk-photon-red)_10%)]'
+        : 'border-[color-mix(in_srgb,var(--color-mzk-plasma)_28%,transparent)]'
+      }`
+
+  const hullInnerCrop = hullSurface ?
+    'absolute inset-px overflow-hidden rounded-[7px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_11%,transparent)]'
+    : 'absolute inset-[3px] overflow-hidden rounded-[1.2rem] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_16%,transparent)] sm:inset-[4px]'
 
   const twinColumnClass = hullSurface ?
       'relative mx-0 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-clip px-[2px]'
@@ -79,19 +107,9 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
   const sklViewportClass = hullSurface ? 'relative min-h-0 flex-1 min-w-0' : 'relative min-h-[min(42vh,520px)] flex-1 min-w-0'
 
   const hullBlock = (
-    <div
-      className={`avatar-hull-shell relative rounded-3xl border-2 bg-gradient-to-b from-[color-mix(in_srgb,var(--color-mzk-black-raised)_95%,black)] via-black to-[color-mix(in_srgb,var(--color-mzk-black)_88%,#04060c)] shadow-[inset_0_0_48px_color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] ${
-        hullSurface ?
-          'mx-0 flex h-full min-h-0 w-full flex-1'
-        : 'relative mx-auto h-[min(54vh,600px)] min-h-[260px] max-h-[min(70vh,720px)] w-full'
-      } ${
-        p.semantic === 'COMBAT_READY' ?
-          'border-[color-mix(in_srgb,var(--color-mzk-gold)_34%,var(--color-mzk-photon-red)_10%)]'
-        : 'border-[color-mix(in_srgb,var(--color-mzk-plasma)_28%,transparent)]'
-      } ring-1 ring-[color-mix(in_srgb,var(--color-mzk-silver)_14%,transparent)]`}
-    >
+    <div className={`avatar-hull-shell relative ${hullShellFrame}`}>
       <div className="relative z-[12] isolate h-full w-full min-h-0 overflow-hidden">
-        <div className="absolute inset-[3px] overflow-hidden rounded-[1.2rem] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_16%,transparent)] sm:inset-[4px]">
+        <div className={hullInnerCrop}>
           <div className="relative z-[14] flex h-full w-full min-h-0 flex-col">
             <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
               <div className={sklViewportClass}>

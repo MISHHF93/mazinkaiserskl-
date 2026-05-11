@@ -6,8 +6,9 @@ import type { VoiceConsoleSlice, VoicePushToTalkProps } from './CommandConsole'
 import {
   CockpitPad,
   CockpitPrimaryActuator,
+  HudDeckGrip,
+  HudSegmentRail,
   LabPad,
-  SIM_FLOAT_PANEL,
   SIM_HUD_METRICS_ANCHOR,
   SIM_HULL_DECK_ANCHOR,
   SIM_ACTION_ROW,
@@ -136,60 +137,66 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
       </div>
 
       <div className={SIM_HULL_DECK_ANCHOR}>
-        <div
+        <HudDeckGrip
           title={deckExpanded ? undefined : 'Kaiser command — More opens Command, Combat moves, and Pilot meters'}
           className={
             deckExpanded ?
-              `${SIM_FLOAT_PANEL} w-full min-h-0 max-h-[min(32dvh,300px)] overflow-y-auto overscroll-contain px-[clamp(0.3rem,1.4vw,0.65rem)] pb-1 pt-1 sm:max-h-[min(34dvh,340px)]`
-            : `${SIM_FLOAT_PANEL} w-full px-2 pb-1.5 pt-1`
+              'w-full min-h-0 max-h-[min(32dvh,300px)] overflow-y-auto overscroll-contain px-[clamp(0.3rem,1.4vw,0.65rem)] pb-1 pt-1 sm:max-h-[min(34dvh,340px)]'
+            : 'w-full px-1.5 pb-1.5 pt-1 sm:px-2'
           }
         >
         {!deckExpanded ?
           <>
             <p
-              className="line-clamp-1 text-center font-mono text-[clamp(9px,2.2vw,11px)] font-medium leading-tight text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_94%,white)]"
+              className="line-clamp-1 border-b border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_14%,transparent)] pb-1 text-center font-mono text-[clamp(9px,2.2vw,11px)] font-medium leading-tight text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_94%,white)]"
               style={{ textShadow: '0 0 12px color-mix(in srgb, var(--color-mzk-plasma-violet) 22%, transparent)' }}
               title={props.kaiserLine}
             >
               {props.kaiserLine}
             </p>
-            <form className={`${SIM_ACTION_ROW} mt-1`} onSubmit={props.onCommandSubmit}>
-              <label htmlFor="hull-lab-cmd-mini" className="sr-only">
-                Directive
-              </label>
-              <input
-                id="hull-lab-cmd-mini"
-                type="text"
-                enterKeyHint="send"
-                placeholder="Directive…"
-                value={props.commandInput}
-                onChange={(e) => props.setCommandInput(e.target.value)}
-                className={`${SIM_CTL_H} min-w-0 flex-1 rounded border border-white/22 bg-neutral-950/95 px-2 py-0.5 font-[family-name:var(--font-body)] text-[clamp(10px,2.4vw,12px)] text-[var(--color-mzk-reactor-white)] outline-none placeholder:text-white/40 focus-visible:border-[color-mix(in_srgb,var(--color-mzk-plasma)_45%,white)] focus-visible:ring-1 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_35%,transparent)]`}
-              />
-              <CockpitPrimaryActuator
-                type="submit"
-                aria-label="Execute directive"
-                className="!min-h-8 !shrink-0 !rounded-md !px-3 !py-1.5 !text-[9px] !tracking-[0.12em]"
-              >
-                Go
-              </CockpitPrimaryActuator>
-              <button
-                type="button"
-                className="h-8 shrink-0 rounded border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_28%,transparent)] bg-black/70 px-2 font-mono text-[8px] uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)] hover:bg-black/85"
-                onClick={() => setDeckExpanded(true)}
-                title="Expand full command deck"
-              >
-                More
-              </button>
+            <form className="mt-1 w-full min-w-0" onSubmit={props.onCommandSubmit}>
+              <HudSegmentRail className="w-full flex-nowrap">
+                <div className="flex min-h-8 min-w-0 flex-[1_1_50%] items-center bg-[color-mix(in_srgb,black_55%,transparent)] px-2 py-0.5 sm:flex-[1_1_60%]">
+                  <label htmlFor="hull-lab-cmd-mini" className="sr-only">
+                    Directive
+                  </label>
+                  <input
+                    id="hull-lab-cmd-mini"
+                    type="text"
+                    enterKeyHint="send"
+                    placeholder="Directive…"
+                    value={props.commandInput}
+                    onChange={(e) => props.setCommandInput(e.target.value)}
+                    className="min-h-[28px] min-w-0 flex-1 border-0 bg-transparent py-0.5 font-[family-name:var(--font-body)] text-[clamp(10px,2.4vw,12px)] text-[var(--color-mzk-reactor-white)] outline-none placeholder:text-white/40 focus-visible:ring-0"
+                  />
+                </div>
+                <div className="flex min-h-8 items-stretch self-stretch border-l border-black/70">
+                  <CockpitPrimaryActuator
+                    type="submit"
+                    aria-label="Execute directive"
+                    className="!h-auto !min-h-8 !rounded-none !px-3 !py-1.5 !text-[9px] !tracking-[0.12em]"
+                  >
+                    Go
+                  </CockpitPrimaryActuator>
+                </div>
+                <button
+                  type="button"
+                  className="flex min-h-8 min-w-[3rem] shrink-0 items-center justify-center border-l border-black/70 bg-[color-mix(in_srgb,black_50%,transparent)] px-2 font-mono text-[8px] font-semibold uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_90%,white)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_12%,black)] active:translate-y-px"
+                  onClick={() => setDeckExpanded(true)}
+                  title="Expand full command deck"
+                >
+                  More
+                </button>
+              </HudSegmentRail>
             </form>
-            <div className={`${SIM_ACTION_ROW} mt-1 justify-center border-t border-white/10 pt-1`}>
+            <HudSegmentRail className="mt-1 w-full justify-center">
               <button
                 type="button"
                 title="Hold to capture speech"
-                className={`${SIM_CTL_H} shrink-0 rounded border px-2 font-mono text-[8px] font-semibold uppercase tracking-[0.08em] ${labEase} ${
+                className={`${SIM_CTL_H} min-h-8 flex-1 shrink-0 border-0 px-2 font-mono text-[8px] font-semibold uppercase tracking-[0.08em] ${labEase} ${
                   props.avatarListening ?
                     'border-[color-mix(in_srgb,var(--color-mzk-gold)_48%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-warning-orange)_22%,black)] text-[var(--color-mzk-reactor-white)]'
-                  : 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_22%,transparent)] bg-black/60 text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_96%,var(--color-mzk-plasma-ice))]'
+                  : 'bg-[color-mix(in_srgb,black_45%,transparent)] text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_96%,var(--color-mzk-plasma-ice))]'
                 } ${props.voice.supportsStt ? '' : 'cursor-not-allowed opacity-55'} `}
                 disabled={!props.voice.supportsStt}
                 {...props.pushToTalkProps}
@@ -198,45 +205,44 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
               </button>
               <LabPad
                 disabled={!props.voice.supportsStt}
-                className={`${SIM_CTL_H} !px-2 !py-0 !text-[8px]`}
+                className={`${SIM_CTL_H} !min-h-8 flex-1 !rounded-none border-0 !text-[8px]`}
                 onClick={() => props.voice.startMicTap()}
               >
                 Mic
               </LabPad>
               <LabPad
                 disabled={!props.sessionId}
-                className={`${SIM_CTL_H} !px-2 !py-0 !text-[8px]`}
+                className={`${SIM_CTL_H} !min-h-8 flex-1 !rounded-none border-0 !text-[8px]`}
                 onClick={() => void props.onVoiceNormalize()}
               >
                 Voice
               </LabPad>
-            </div>
+            </HudSegmentRail>
           </>
         : <>
-        <div className="mb-1 flex items-center justify-between gap-1">
+        <div className="mb-1.5 flex flex-col gap-1 border-b border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_16%,transparent)] pb-1.5 sm:flex-row sm:items-center sm:gap-2">
           <button
             type="button"
-            className="rounded border border-white/20 bg-black/50 px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_80%,white)] hover:bg-black/70 pointer-coarse:min-h-10"
+            className="shrink-0 rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_24%,transparent)] bg-[color-mix(in_srgb,black_40%,transparent)] px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_12%,black)] pointer-coarse:min-h-10 active:translate-y-px"
             onClick={() => setDeckExpanded(false)}
           >
             Minimize ▴
           </button>
+          <p
+            className="min-w-0 flex-1 text-center font-[family-name:var(--font-display)] text-[clamp(0.68rem,2.4vw,0.88rem)] font-semibold leading-tight text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_98%,white)] sm:px-1"
+            style={{
+              textShadow:
+                '0 0 1px rgba(0,0,0,1), 0 0 14px color-mix(in srgb, var(--color-mzk-plasma-violet) 28%, transparent)',
+            }}
+          >
+            {props.kaiserLine}
+          </p>
           {props.subtitleStreaming ?
-            <span className="font-mono text-[clamp(8px,1.8vw,10px)] uppercase tracking-[0.16em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]">
+            <span className="shrink-0 text-center font-mono text-[clamp(8px,1.8vw,10px)] uppercase tracking-[0.16em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)] sm:text-right">
               Live stream
             </span>
-          : <span className="w-8 shrink-0" aria-hidden />}
+          : <span className="hidden w-0 shrink-0 sm:block sm:w-16" aria-hidden />}
         </div>
-        <p
-          className="border-b border-white/12 pb-1 text-center font-[family-name:var(--font-display)] text-[clamp(0.68rem,2.4vw,0.88rem)] font-semibold leading-tight text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_98%,white)]"
-          style={{
-            textShadow:
-              '0 0 1px rgba(0,0,0,1), 0 0 14px color-mix(in srgb, var(--color-mzk-plasma-violet) 28%, transparent)',
-          }}
-        >
-          {props.kaiserLine}
-        </p>
-
         <div
           role="tablist"
           aria-label="Hull deck sections"
@@ -479,7 +485,7 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
         : null}
         </>
         }
-        </div>
+        </HudDeckGrip>
       </div>
     </div>
   )
