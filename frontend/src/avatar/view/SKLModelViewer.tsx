@@ -51,7 +51,8 @@ import {
   type SklViewerExtSettings,
 } from './mazinkaiserGlbViewerSettings'
 import { CockpitPad, ViewerIconButton } from '../../components/cockpit/cockpitControls'
-import { SvgDebug, SvgExpand, SvgFit, SvgGear, SvgReset } from '../../components/cockpit/viewerToolbarIcons'
+import { SvgDebug, SvgDockCollapse, SvgExpand, SvgFit, SvgGear, SvgReset } from '../../components/cockpit/viewerToolbarIcons'
+import { fetchAndApplySklMoveArtifactsCove } from './sklArtifactCove'
 
 export type HullViewportState = 'checking' | 'absent' | 'ready'
 
@@ -599,6 +600,11 @@ function SklLoadedModel(props: SklLoadedProps) {
   const [footPlaneY, setFootPlaneY] = useState(0)
   /** Hull bounding scale — zoom limits track model size. */
   const modelExtentRef = useRef(0)
+  /**
+   * Orbit min/max distance as React state so drei OrbitControls props stay the authority (otherwise
+   * imperative updates in layout can be overwritten on the next render and zoom/orbit feels broken).
+   */
+  const [orbitDistanceLimits, setOrbitDistanceLimits] = useState({ min: 0.02, max: 8000 })
 
   const lighting: SklLightingPresetId = autoRecovery ? 'DIAGNOSTIC' : ext.lightingPreset
   const surface: SklMaterialSurfaceId = autoRecovery ? 'clay' : ext.materialSurface
@@ -680,39 +686,34 @@ function SklLoadedModel(props: SklLoadedProps) {
         gl.outputColorSpace === THREE.SRGBColorSpace ? 'srgb' : String(gl.outputColorSpace ?? 'linear'),
     }
     onDigestRef.current({ ...d, rendererReadout: readout })
-    modelExtentRef.current = Math.max(d.maxDim, 1e-6)
+    const ext = Math.max(d.maxDim, 1e-6)
+    modelExtentRef.current = ext
+    setOrbitDistanceLimits({
+      min: Math.max(ext * 0.0028, 0.008),
+      max: Math.max(ext * 40, 28),
+    })
     setFootPlaneY((prev) => {
       const y = d.box.min.y
       return Math.abs(prev - y) < 1e-4 ? prev : y
     })
-    const applyZoomLimits = (target: OrbitControlsImpl) => {
-      const ext = modelExtentRef.current
-      /** Allow closer face inspection; max keeps ultrawide pulls usable. */
-      target.minDistance = Math.max(ext * 0.0032, 0.011)
-      target.maxDistance = Math.max(ext * 32, 20)
-    }
-    const ctrl = controlsRef.current
-    if (ctrl) applyZoomLimits(ctrl)
-    else queueMicrotask(() => controlsRef.current && applyZoomLimits(controlsRef.current))
     /**
      * Depth precision: a fixed near of ~5e-4 with far 8000 gives a huge ratio → z-fighting / surface sparkle.
      * Clip planes scale with hull extent (still allows close orbit via OrbitControls minDistance).
      */
-    const extent = Math.max(d.maxDim, 1e-6)
-    camera.near = Math.max(extent * 0.0024, 0.028)
-    camera.far = Math.min(Math.max(extent * 220, 160), 7200)
+    camera.near = Math.max(ext * 0.0024, 0.028)
+    camera.far = Math.min(Math.max(ext * 220, 160), 7200)
     camera.updateProjectionMatrix()
 
     const key = keyLightRef.current
     if (key?.shadow) {
-      const span = Math.max(extent * 4.2, 18)
+      const span = Math.max(ext * 4.2, 18)
       const sc = key.shadow.camera
       sc.left = -span
       sc.right = span
       sc.top = span
       sc.bottom = -span
-      sc.near = Math.max(extent * 0.32, 2.8)
-      sc.far = Math.max(extent * 34, span * 3.2)
+      sc.near = Math.max(ext * 0.32, 2.8)
+      sc.far = Math.max(ext * 34, span * 3.2)
       key.shadow.bias = -0.00012
       key.shadow.normalBias = 0.055
       key.shadow.mapSize.set(2048, 2048)
@@ -757,15 +758,15 @@ function SklLoadedModel(props: SklLoadedProps) {
         enableZoom
         /** World-horizontal pan on Y-up deck (screen-space pan feels misaligned vs grid / forward-back). */
         screenSpacePanning={false}
-        minPolarAngle={0.06}
-        maxPolarAngle={Math.PI - 0.05}
-        rotateSpeed={1.35}
-        zoomSpeed={1.68}
-        panSpeed={1.35}
+        minPolarAngle={0.01}
+        maxPolarAngle={Math.PI - 0.01}
+        rotateSpeed={1.75}
+        zoomSpeed={2.15}
+        panSpeed={1.65}
         autoRotate={settings.autoRotate}
         autoRotateSpeed={settings.autoRotateSpeed}
-        minDistance={0.025}
-        maxDistance={5000}
+        minDistance={orbitDistanceLimits.min}
+        maxDistance={orbitDistanceLimits.max}
       />
       <SklCameraTelemetry onUpdate={onCamTelemetry} />
       <SklPointerRaycastOrbitFocus rootRef={rootRef} />
@@ -918,6 +919,8 @@ export function SKLModelViewer(props: {
   const [showDebugBounds, setShowDebugBounds] = useState(false)
   const [debugOpen, setDebugOpen] = useState(false)
   const [toolbarOpen, setToolbarOpen] = useState(false)
+  /** Compact bottom-right dock (Fit + expand); expanded shows full toolbar + optional panels. */
+  const [hullDockExpanded, setHullDockExpanded] = useState(false)
   const [gltfErr, setGltfErr] = useState<string | null>(null)
   const [autoRecovery, setAutoRecovery] = useState(false)
   const [glbProgress, setGlbProgress] = useState({ active: false, progress: 0, item: '' })
@@ -926,6 +929,13 @@ export function SKLModelViewer(props: {
     target: [0, 0, 0],
   })
   const fitRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    const url = import.meta.env.VITE_SKL_ARTIFACTS_URL
+    void fetchAndApplySklMoveArtifactsCove(
+      typeof url === 'string' && url.trim() !== '' ? url.trim() : undefined,
+    )
+  }, [])
 
   const onGlbProgress = useCallback((p: { active: boolean; progress: number; item: string }) => {
     setGlbProgress(p)
@@ -1047,11 +1057,11 @@ export function SKLModelViewer(props: {
         </div>
       ) : null}
 
-      <div className="absolute inset-0 min-h-0">
+      <div className="pointer-events-auto absolute inset-0 min-h-0">
         <Canvas
           shadows
           className="block cursor-grab touch-none active:cursor-grabbing"
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: '100%', height: '100%', touchAction: 'none' }}
           gl={{
             preserveDrawingBuffer: true,
             antialias: true,
@@ -1059,6 +1069,9 @@ export function SKLModelViewer(props: {
             outputColorSpace: THREE.SRGBColorSpace,
           }}
           dpr={[1, 2]}
+          onCreated={({ gl }) => {
+            gl.domElement.style.touchAction = 'none'
+          }}
         >
           <SklGlbProgressReporter onProg={onGlbProgress} />
           <GltfCanvasErrorBoundary
@@ -1085,9 +1098,9 @@ export function SKLModelViewer(props: {
         </Canvas>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[100] flex flex-col gap-3 pb-[max(0.45rem,env(safe-area-inset-bottom,0px))] pl-[max(0.35rem,env(safe-area-inset-left,0px))] pr-[max(0.35rem,env(safe-area-inset-right,0px))] pt-2 sm:inset-x-auto sm:bottom-3 sm:right-3 sm:left-auto sm:items-end sm:pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] lg:bottom-4 lg:right-4 xl:bottom-6 xl:right-8">
-        <div className="pointer-events-auto flex w-full max-w-[100vw] flex-col gap-3 sm:max-w-[min(480px,calc(100vw-1.25rem))] sm:self-end">
-          {toolbarOpen ? (
+      <div className="pointer-events-none absolute bottom-0 right-0 z-[100] flex max-w-[calc(100vw-0.35rem)] flex-col items-end gap-2 pb-[max(0.35rem,env(safe-area-inset-bottom,0px))] pr-[max(0.35rem,env(safe-area-inset-right,0px))] pl-2 pt-2 sm:bottom-3 sm:right-3 lg:bottom-4 lg:right-4">
+        <div className="pointer-events-auto flex w-auto flex-col items-end gap-2">
+          {hullDockExpanded && toolbarOpen ? (
             <div
               className="max-h-[min(58dvh,640px)] overflow-y-auto overscroll-contain rounded-2xl border-2 border-white/28 bg-[#070910]/96 p-4 font-mono text-[clamp(12px,3vw,14px)] leading-snug text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] shadow-[0_14px_48px_rgba(0,0,0,0.92)] ring-2 ring-black/70 backdrop-blur-md sm:p-4"
               onPointerDown={(e) => e.stopPropagation()}
@@ -1101,8 +1114,10 @@ export function SKLModelViewer(props: {
                 Orbit · zoom · pan · reset
               </p>
               <p className="mb-3 rounded-lg bg-black/50 px-2 py-1.5 text-[clamp(11px,2.85vw,13px)] leading-relaxed text-white/85 ring-1 ring-white/10">
-                Wheel over face/hands: orbit pivot snaps to that surface · Double-click hull: same · Left-drag orbits · Right-drag
-                pans deck · Middle: dolly · Reset recenters · Auto = turntable when enabled.
+                Drag on the hull (not the toolbar): <strong>left</strong> = orbit 360° around the target ·{' '}
+                <strong>right</strong> = pan · <strong>wheel</strong> = zoom (pivot moves to what is under the cursor) ·{' '}
+                <strong>double-click</strong> = pivot on that surface · middle button = dolly · Reset = fit + chest-height
+                pivot · Auto = turntable when enabled.
               </p>
             <div className="flex flex-wrap gap-2">
               <CockpitPad className="text-[clamp(11px,2.6vw,12px)]" onClick={() => fitRef.current?.()}>
@@ -1249,7 +1264,7 @@ export function SKLModelViewer(props: {
           </div>
         ) : null}
 
-          {debugOpen ? (
+          {hullDockExpanded && debugOpen ? (
             <div
               className="max-h-[min(52dvh,560px)] w-full overflow-y-auto overscroll-contain rounded-2xl border-2 border-white/28 bg-[#070910]/96 p-4 font-mono text-[clamp(11px,2.85vw,13px)] leading-relaxed text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)] shadow-[0_14px_48px_rgba(0,0,0,0.92)] ring-2 ring-black/70 backdrop-blur-md sm:p-4"
               onPointerDown={(e) => e.stopPropagation()}
@@ -1320,29 +1335,60 @@ export function SKLModelViewer(props: {
           </div>
         ) : null}
 
-          <div
-            className="flex flex-wrap justify-end gap-2.5 rounded-2xl border-2 border-white/28 bg-[#070910]/94 p-2.5 shadow-[0_8px_40px_rgba(0,0,0,0.9)] ring-2 ring-black/75 backdrop-blur-md"
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <ViewerIconButton label="Hull viewer settings" pressed={toolbarOpen} onClick={() => setToolbarOpen((v) => !v)}>
-              <SvgGear />
-            </ViewerIconButton>
-            <ViewerIconButton label="Fit hull in view" onClick={() => fitRef.current?.()}>
-              <SvgFit />
-            </ViewerIconButton>
-            <ViewerIconButton label="Reset viewer defaults" onClick={resetViewerDefaults}>
-              <SvgReset />
-            </ViewerIconButton>
-            <ViewerIconButton label="Model debug readout" pressed={debugOpen} onClick={() => setDebugOpen((v) => !v)}>
-              <SvgDebug />
-            </ViewerIconButton>
-            <ViewerIconButton
-              label="Fullscreen hull viewport"
-              onClick={() => void wrapRef.current?.requestFullscreen?.()}
+          {!hullDockExpanded ?
+            <div
+              className="flex gap-0.5 rounded-2xl border border-white/22 bg-[#070910]/92 p-0.5 shadow-[0_6px_32px_rgba(0,0,0,0.88)] ring-1 ring-black/65 backdrop-blur-md"
+              onPointerDown={(e) => e.stopPropagation()}
             >
-              <SvgExpand />
-            </ViewerIconButton>
-          </div>
+              <ViewerIconButton
+                className="!h-10 !w-10 !min-h-[40px] !min-w-[40px] sm:!min-h-[44px] sm:!min-w-[44px]"
+                label="Fit hull in view"
+                onClick={() => fitRef.current?.()}
+              >
+                <SvgFit />
+              </ViewerIconButton>
+              <ViewerIconButton
+                className="!h-10 !w-10 !min-h-[40px] !min-w-[40px] sm:!min-h-[44px] sm:!min-w-[44px]"
+                label="Expand hull toolbar"
+                onClick={() => setHullDockExpanded(true)}
+              >
+                <SvgGear />
+              </ViewerIconButton>
+            </div>
+          : <div
+              className="flex flex-wrap justify-end gap-1.5 rounded-2xl border-2 border-white/28 bg-[#070910]/94 p-1.5 shadow-[0_8px_40px_rgba(0,0,0,0.9)] ring-2 ring-black/75 backdrop-blur-md"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <ViewerIconButton
+                label="Collapse hull toolbar"
+                onClick={() => {
+                  setHullDockExpanded(false)
+                  setToolbarOpen(false)
+                  setDebugOpen(false)
+                }}
+              >
+                <SvgDockCollapse />
+              </ViewerIconButton>
+              <ViewerIconButton label="Hull viewer settings" pressed={toolbarOpen} onClick={() => setToolbarOpen((v) => !v)}>
+                <SvgGear />
+              </ViewerIconButton>
+              <ViewerIconButton label="Fit hull in view" onClick={() => fitRef.current?.()}>
+                <SvgFit />
+              </ViewerIconButton>
+              <ViewerIconButton label="Reset viewer defaults" onClick={resetViewerDefaults}>
+                <SvgReset />
+              </ViewerIconButton>
+              <ViewerIconButton label="Model debug readout" pressed={debugOpen} onClick={() => setDebugOpen((v) => !v)}>
+                <SvgDebug />
+              </ViewerIconButton>
+              <ViewerIconButton
+                label="Fullscreen hull viewport"
+                onClick={() => void wrapRef.current?.requestFullscreen?.()}
+              >
+                <SvgExpand />
+              </ViewerIconButton>
+            </div>
+          }
         </div>
       </div>
     </div>

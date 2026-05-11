@@ -13,6 +13,7 @@ import { useVoiceInteractionLayer } from './hooks/useVoiceInteractionLayer'
 import * as api from './lib/api'
 import { logOptionalApiFailure } from './lib/devLog'
 import { cancelBrowserSpeech, speakWithBrowser, subscribeBrowserSpeakingPoll } from './speech/browserTts'
+import { subscribeMazinkaiserVoicesReady } from './speech/kaiserVoice'
 import type { MechaHudState, PersonalityMode } from './types'
 import { normalizeWakeSnippet } from './voice/wakeArchitecture'
 
@@ -151,6 +152,11 @@ export default function App() {
   useEffect(() => () => cancelBrowserSpeech(), [])
 
   useEffect(() => {
+    const off = subscribeMazinkaiserVoicesReady(() => {})
+    return off
+  }, [])
+
+  useEffect(() => {
     const off = subscribeBrowserSpeakingPoll(setTtsSpeaking)
     return off
   }, [])
@@ -211,7 +217,7 @@ export default function App() {
     }
     speakWithBrowser({
       text: target,
-      rate: 1.05,
+      profile: 'mazinkaiser',
       onEnd: () => consumeAssistPlayback(),
       onError: () => consumeAssistPlayback(),
     })

@@ -75,12 +75,17 @@ if (sum.extensionsUsed.length > 0) {
 if (sum.extensionsRequired.length > 0) {
   process.stdout.write(`extensionsRequired: ${sum.extensionsRequired.join(', ')}\n`)
 }
+if (sum.animationSummary.length > 0) {
+  process.stdout.write('\n--- Animations (glTF animations[]) ---\n')
+  for (const line of sum.animationSummary) process.stdout.write(`  ${line}\n`)
+}
 if (sum.counts.animations === 0 && sum.counts.skins > 0) {
   process.stdout.write(
     '\n--- Cockpit / backend note ---\n' +
       'This bundle has a skinned rig but zero glTF animations[]. Move simulation in the backend\n' +
       'emits timed AnimationCue `hud_event` strings (not GLB clip names). See:\n' +
-      '  docs/SKL_GLB_ANIMATION_AND_BACKEND_BRIDGE.md\n',
+      '  docs/SKL_GLB_ANIMATION_AND_BACKEND_BRIDGE.md\n' +
+      'Tools: `npm run inspect:glb:reverse` + `cd backend && python scripts/emit_skl_cove_stub.py`\n',
   )
 }
 if (sum.warnings.length > 0) {

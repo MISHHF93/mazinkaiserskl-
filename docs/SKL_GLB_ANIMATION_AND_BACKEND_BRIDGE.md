@@ -89,8 +89,9 @@ Unknown cues resolve to **no clip** for that frame (previous action / idle polic
 
 ## Next steps if you want true 3D move playback
 
-1. **Author animations** in Blender (or source tool) **per move** or as a shared state machine; export glTF/GLB with **`animations[]` populated** and **meaningful names** (see checklist above).
+1. **Author animations** in Blender (or source tool) **per move** as a shared state machine; export glTF/GLB with **`animations[]` populated** and **meaningful names** (see checklist above).
 2. The viewer **`SklMoveAnimationPlayback`** already runs **`AnimationMixer`** on the hull root; ensure clip names match **`sklClipMapping`** (slug + cue rules) or **`MOVE_SLUG_CLIP_ALIASES`**.
 3. Timing follows the same **`animation_plan`** as the HUD: **`duration_ms`** accumulation vs **`executingStartedAtMs`** while **`phase === 'executing'`** (REST + websocket batches).
+4. **Optional:** load a **Cove artifacts bundle** (JSON) at runtime to add **`clipAliases`**, idle candidates, and cue resonance without editing TypeScript — see **`docs/SKL_MOVE_ARTIFACTS_COVE.md`**. Set **`VITE_SKL_ARTIFACTS_URL`** to override the default path under `public/artifacts/`.
 
 Until clips exist in the GLB, **`AnimationCue`** remains the contract for semantics and timing; the SKL file stays **static posed geometry** with skin weights ready for clips, and playback degrades gracefully (**zero clips**).

@@ -1,6 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import type { AnimationPlanCueWire } from '../presentation/types'
-import { pickIdleClipFromAnimations, resolveSklClipForCue } from './sklClipMapping'
+import {
+  pickIdleClipFromAnimations,
+  registerSklArtifactAliases,
+  resetSklArtifactRegistriesForTests,
+  resolveSklClipForCue,
+} from './sklClipMapping'
+
+afterEach(() => {
+  resetSklArtifactRegistriesForTests()
+})
 
 function cue(partial: Partial<AnimationPlanCueWire> & Pick<AnimationPlanCueWire, 'hud_event'>): AnimationPlanCueWire {
   return {
@@ -35,6 +44,13 @@ describe('resolveSklClipForCue', () => {
     expect(resolveSklClipForCue('rocket-punch', cue({ hud_event: 'hud.telemetry.recoil_shockwave' }))).toBe(
       'rocket-punch-recoil',
     )
+  })
+
+  it('uses Cove / runtime alias registry for execution clip names', () => {
+    registerSklArtifactAliases({ 'rocket-punch': 'RocketPunch_exported' })
+    expect(
+      resolveSklClipForCue('rocket-punch', cue({ hud_event: 'avatar.anim.execution_burst' })),
+    ).toBe('RocketPunch_exported')
   })
 })
 

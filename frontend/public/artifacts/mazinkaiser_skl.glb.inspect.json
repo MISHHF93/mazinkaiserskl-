@@ -1,0 +1,46 @@
+{
+  "schema": "mazinkaiser/skl-glb-reverse-engineer/1",
+  "sourceFile": "c:\\Users\\borah\\Mazinkaiser AI\\mazinkaiser_skl.glb",
+  "container": {
+    "glbVersion": 2,
+    "totalByteLength": 73182772
+  },
+  "gltf": {
+    "assetVersion": "2.0",
+    "generator": "Sketchfab-15.30.0",
+    "extensionsUsed": [
+      "KHR_materials_emissive_strength"
+    ],
+    "counts": {
+      "scenes": 1,
+      "nodes": 88,
+      "meshes": 10,
+      "materials": 10,
+      "textures": 30,
+      "images": 30,
+      "accessors": 70,
+      "bufferViews": 36,
+      "buffers": 1,
+      "skins": 1,
+      "animations": 0
+    },
+    "animations": [],
+    "warnings": [
+      "Skin/rig present but animations[] is empty — no glTF clip names exist yet. Cockpit move flows use logical animation cues (see docs/SKL_GLB_ANIMATION_AND_BACKEND_BRIDGE.md), not this file’s clips."
+    ]
+  },
+  "playback": {
+    "status": "blocked_no_animation_clips",
+    "nextSteps": [
+      "Author actions in Blender (or source DCC) as NLA strips / actions; export glTF with animations[] populated.",
+      "Name each AnimationClip to match Cove clipAliases or sklClipMapping heuristics (e.g. move_id, move_id-charge).",
+      "Replace or sync `mazinkaiser_skl.glb` at repo root; run `npm run sync:skl-glb` (copies into frontend/public/models/).",
+      "Align Cove bundle: `cd backend && python scripts/emit_skl_cove_stub.py` then fill clipAliases from actual clip names."
+    ]
+  },
+  "backendWire": {
+    "movesCatalogHttp": "GET {API_PREFIX}/moves?extended=true (see backend/mazinkaiser/api/routes/moves.py)",
+    "animationContract": "REST move batches carry animation_plan with hud_event phases; SklMoveAnimationPlayback resolves glTF clip via sklClipMapping + Cove.",
+    "coveDefaultUrl": "/artifacts/mazinkaiser-move-artifacts.cove.json"
+  }
+}

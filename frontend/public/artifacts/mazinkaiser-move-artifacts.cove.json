@@ -1,0 +1,64 @@
+{
+  "$schema": "mazinkaiser/skl-move-artifacts/1",
+  "version": 1,
+  "notes": "Regenerated from KaiserMove enum order. Merge clipAliases manually after GLB gains animations[].",
+  "craftsman": {
+    "rig": "Mazinkaiser SKL humanoid",
+    "exportedBy": "backend/scripts/emit_skl_cove_stub.py",
+    "notes": "clipAliases: map kebab move_id \u2192 exact AnimationClip.name in GLB. Fill after exporting animations; see docs/SKL_GLB_ANIMATION_AND_BACKEND_BRIDGE.md.",
+    "sourceGlb": "repo-root mazinkaiser_skl.glb (reverse-engineered: skin=1, animations=0, Sketchfab)"
+  },
+  "clipAliases": {},
+  "idleClipCandidates": [],
+  "cueResonance": [
+    {
+      "hudEventIncludes": "execution_burst",
+      "clipTemplate": "{slug}",
+      "order": 0
+    },
+    {
+      "hudEventIncludes": "phase_charge",
+      "clipTemplate": "{slug}-charge",
+      "order": 1
+    },
+    {
+      "hudEventIncludes": "arm_switch",
+      "clipTemplate": "{slug}-arm",
+      "order": 2
+    },
+    {
+      "hudEventIncludes": "recoil",
+      "clipTemplate": "{slug}-recoil",
+      "order": 3
+    },
+    {
+      "hudEventIncludes": "cooldown",
+      "clipTemplate": "{slug}-cooldown",
+      "order": 4
+    }
+  ],
+  "batches": [
+    {
+      "id": "kaiser-move-enum-order",
+      "label": "All KaiserMove entries in enum definition order (REST move_id slugs)",
+      "orderedMoveIds": [
+        "rocket-punch",
+        "turbo-smasher-punch",
+        "rust-tornado",
+        "fire-blaster",
+        "koshiryoku-beam",
+        "kaiser-blade",
+        "final-kaiser-blade",
+        "kaiser-nova",
+        "scrander-boomerang",
+        "shoulder-slicer",
+        "glacial-beam-reito-beam",
+        "giganto-missile",
+        "dynamite-tackle",
+        "kaiser-knuckle",
+        "mazin-field-simulation"
+      ],
+      "gapMs": 0
+    }
+  ]
+}

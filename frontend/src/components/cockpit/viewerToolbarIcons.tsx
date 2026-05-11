@@ -85,3 +85,21 @@ export function SvgExpand(props: { className?: string }) {
     </svg>
   )
 }
+
+/** Collapse hull chrome to the compact dock (maximize viewport). */
+export function SvgDockCollapse(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.65}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+      aria-hidden
+    >
+      <path d="M18 15l-6-6-6 6" />
+    </svg>
+  )
+}

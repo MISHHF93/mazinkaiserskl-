@@ -15,8 +15,10 @@ class BrowserClientTTSHints:
     def build_client_hints(self, text: str) -> dict[str, object]:
         return {
             "engine": "browser_speech_synthesis",
-            "rate": 1.05,
-            "pitch": 1.0,
+            # Matches frontend MAZINKAISER_TTS_PROSODY (mechanism / baritone cockpit voice).
+            "rate": 0.93,
+            "pitch": 0.86,
+            "voice_role": "mazinkaiser_mechanism",
             "chunk_ssml": False,
             "char_estimate": len(text),
         }

@@ -6,6 +6,8 @@
   "scripts": {
     "sync:skl-glb": "node scripts/sync-mazinkaiser-skl-glb.mjs",
     "inspect:glb": "tsx scripts/glb-info.ts",
+    "inspect:glb:reverse": "tsx scripts/reverse-engineer-skl-glb.ts",
+    "inspect:glb:nodes": "tsx scripts/glb-nodes.ts",
     "predev": "node scripts/sync-mazinkaiser-skl-glb.mjs",
     "prebuild": "node scripts/sync-mazinkaiser-skl-glb.mjs",
     "dev": "vite",
