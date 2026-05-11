@@ -1,4 +1,5 @@
 import type { FormEvent } from 'react'
+import { useState } from 'react'
 import type { MechaHudState, PersonalityMode } from '../../types'
 import { KAISER_MOVES, PERSONALITY_MODES } from '../../types'
 import type { VoiceConsoleSlice, VoicePushToTalkProps } from './CommandConsole'
@@ -70,21 +71,119 @@ function MicroBar({ label, pct }: { label: string; pct: number }) {
 export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
   const d = props.hud
   const labEase = '[transition-timing-function:cubic-bezier(0.22,1,0.36,1)] duration-[var(--duration-mzk-short)]'
+  /** Viewer-first: start collapsed so the SKL viewport uses maximum area. */
+  const [deckExpanded, setDeckExpanded] = useState(false)
 
   return (
     <div role="region" aria-label="Hull lab deck" className="pointer-events-none flex h-full min-h-0 flex-col">
       <div className="pointer-events-none flex min-h-0 flex-1 flex-col items-end pt-[clamp(1px,0.5vw,4px)] pr-[clamp(2px,1vw,8px)]">
         <div className="pointer-events-auto flex max-w-[min(96%,min(32rem,86vw))] flex-wrap justify-end gap-[clamp(0.1rem,0.5vw,0.28rem)] 2xl:max-w-[min(36rem,36vw)]">
-          <MiniChip k="Twin" title={props.twinStateLabel} v={props.twinStateLabel.length > 22 ? `${props.twinStateLabel.slice(0, 22)}…` : props.twinStateLabel} />
-          <MiniChip k="Alert" v={(d?.tactical_alert ?? '—').slice(0, 24)} />
-          <MicroBar label="PH" pct={d?.photon_power_pct ?? 0} />
-          <MicroBar label="SY" pct={d?.sync_rate_pct ?? 0} />
-          <MicroBar label="TH" pct={d?.heat_level_pct ?? 0} />
-          <MicroBar label="AR" pct={d?.armor_integrity_pct ?? 0} />
+          <MiniChip k="Twin" title={props.twinStateLabel} v={props.twinStateLabel.length > 18 ? `${props.twinStateLabel.slice(0, 18)}…` : props.twinStateLabel} />
+          <MiniChip k="Alert" v={(d?.tactical_alert ?? '—').slice(0, 20)} />
+          {deckExpanded ?
+            <>
+              <MicroBar label="PH" pct={d?.photon_power_pct ?? 0} />
+              <MicroBar label="SY" pct={d?.sync_rate_pct ?? 0} />
+              <MicroBar label="TH" pct={d?.heat_level_pct ?? 0} />
+              <MicroBar label="AR" pct={d?.armor_integrity_pct ?? 0} />
+            </>
+          : (
+            <button
+              type="button"
+              className="pointer-events-auto rounded border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_30%,transparent)] bg-black/75 px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_78%,white)] shadow-sm backdrop-blur-sm hover:bg-black/90"
+              onClick={() => setDeckExpanded(true)}
+            >
+              HUD ▾
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="pointer-events-auto mx-auto mt-auto w-[min(100%,56rem)] max-h-[min(38dvh,360px)] shrink-0 overflow-y-auto overscroll-contain rounded-t-xl border border-b-0 border-white/28 bg-[color-mix(in_srgb,#070910_94%,black)] px-[clamp(0.3rem,1.4vw,0.7rem)] pb-[max(0.45rem,env(safe-area-inset-bottom,0px))] pt-[clamp(0.3rem,1vw,0.55rem)] shadow-[0_-12px_40px_rgba(0,0,0,0.72)] backdrop-blur-md min-[1400px]:max-h-[min(36dvh,400px)] min-[1600px]:max-w-[min(880px,44vw)] 2xl:rounded-t-2xl">
+      <div
+        className={
+          deckExpanded ?
+            'pointer-events-auto mx-auto mt-auto w-[min(100%,56rem)] max-h-[min(32dvh,320px)] shrink-0 overflow-y-auto overscroll-contain rounded-t-xl border border-b-0 border-white/28 bg-[color-mix(in_srgb,#070910_94%,black)] px-[clamp(0.3rem,1.4vw,0.65rem)] pb-[max(0.4rem,env(safe-area-inset-bottom,0px))] pt-[clamp(0.28rem,1vw,0.5rem)] shadow-[0_-10px_34px_rgba(0,0,0,0.7)] backdrop-blur-md min-[1400px]:max-h-[min(30dvh,360px)] min-[1600px]:max-w-[min(880px,44vw)] 2xl:rounded-t-2xl'
+          : 'pointer-events-auto mx-auto mt-auto w-[min(100%,min(520px,calc(100vw-8px)))] shrink-0 rounded-t-lg border border-b-0 border-white/25 bg-[color-mix(in_srgb,#070910_92%,black)] px-2 pb-[max(0.35rem,env(safe-area-inset-bottom,0px))] pt-1 shadow-[0_-8px_28px_rgba(0,0,0,0.65)] backdrop-blur-md'
+        }
+      >
+        {!deckExpanded ?
+          <>
+            <p
+              className="line-clamp-1 text-center font-mono text-[clamp(9px,2.2vw,11px)] font-medium leading-tight text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_94%,white)]"
+              style={{ textShadow: '0 0 12px color-mix(in srgb, var(--color-mzk-plasma-violet) 22%, transparent)' }}
+              title={props.kaiserLine}
+            >
+              {props.kaiserLine}
+            </p>
+            <form className="mt-1 flex items-center gap-1" onSubmit={props.onCommandSubmit}>
+              <label htmlFor="hull-lab-cmd-mini" className="sr-only">
+                Directive
+              </label>
+              <input
+                id="hull-lab-cmd-mini"
+                type="text"
+                enterKeyHint="send"
+                placeholder="Directive…"
+                value={props.commandInput}
+                onChange={(e) => props.setCommandInput(e.target.value)}
+                className="h-8 min-w-0 flex-1 rounded border border-white/22 bg-neutral-950/95 px-2 py-0.5 font-[family-name:var(--font-body)] text-[clamp(10px,2.4vw,12px)] text-[var(--color-mzk-reactor-white)] outline-none placeholder:text-white/40 focus-visible:border-[color-mix(in_srgb,var(--color-mzk-plasma)_45%,white)] focus-visible:ring-1 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_35%,transparent)]"
+              />
+              <CockpitPrimaryActuator
+                type="submit"
+                aria-label="Execute directive"
+                className="!min-h-8 !shrink-0 !rounded-md !px-3 !py-1.5 !text-[9px] !tracking-[0.12em]"
+              >
+                Go
+              </CockpitPrimaryActuator>
+              <button
+                type="button"
+                className="h-8 shrink-0 rounded border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_28%,transparent)] bg-black/70 px-2 font-mono text-[8px] uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)] hover:bg-black/85"
+                onClick={() => setDeckExpanded(true)}
+                title="Expand full command deck"
+              >
+                More
+              </button>
+            </form>
+            <div className="mt-1 flex items-center justify-center gap-1 border-t border-white/10 pt-1">
+              <button
+                type="button"
+                title="Hold to capture speech"
+                className={`h-7 shrink-0 rounded border px-2 font-mono text-[8px] font-semibold uppercase tracking-[0.08em] ${labEase} ${
+                  props.avatarListening ?
+                    'border-[color-mix(in_srgb,var(--color-mzk-gold)_48%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-warning-orange)_22%,black)] text-[var(--color-mzk-reactor-white)]'
+                  : 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_22%,transparent)] bg-black/60 text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_96%,var(--color-mzk-plasma-ice))]'
+                } ${props.voice.supportsStt ? '' : 'cursor-not-allowed opacity-55'} `}
+                disabled={!props.voice.supportsStt}
+                {...props.pushToTalkProps}
+              >
+                PTT
+              </button>
+              <LabPad
+                disabled={!props.voice.supportsStt}
+                className="!h-7 !min-h-0 !px-2 !py-0 !text-[8px]"
+                onClick={() => props.voice.startMicTap()}
+              >
+                Mic
+              </LabPad>
+              <LabPad
+                disabled={!props.sessionId}
+                className="!h-7 !min-h-0 !px-2 !py-0 !text-[8px]"
+                onClick={() => void props.onVoiceNormalize()}
+              >
+                Voice
+              </LabPad>
+            </div>
+          </>
+        : <>
+        <div className="mb-1 flex justify-end">
+          <button
+            type="button"
+            className="rounded border border-white/20 bg-black/50 px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_80%,white)] hover:bg-black/70"
+            onClick={() => setDeckExpanded(false)}
+          >
+            Minimize ▴
+          </button>
+        </div>
         <p
           className="border-b border-white/12 pb-1 text-center font-[family-name:var(--font-display)] text-[clamp(0.68rem,2.4vw,0.88rem)] font-semibold leading-tight text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_98%,white)]"
           style={{
@@ -257,6 +356,8 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
             : null}
           </div>
         </details>
+        </>
+        }
       </div>
     </div>
   )
