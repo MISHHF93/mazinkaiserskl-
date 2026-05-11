@@ -1,0 +1,18 @@
+---
+description: Mazinkaiser Phase 2 — incremental architecture; follow orchestration docs
+alwaysApply: true
+---
+
+# Systems architect phase (incremental mutations)
+
+Implementation work MUST follow **`docs/PROMPT_PIPELINE.md`** (master 10-prompt chain) and stay aligned with **`docs/SYSTEM_CANON.md`**, **`docs/ARCHITECTURE.md`**, and **`backend/STRUCTURE.md`**.
+
+**IMPORTANT:**
+
+- Update existing modules instead of rebuilding from scratch.
+- Preserve architectural consistency.
+- Maintain backward compatibility.
+- Reuse existing services and abstractions.
+- Expand the current system incrementally.
+- Use internet research to improve implementation quality.
+- Prefer official documentation and production-grade patterns.

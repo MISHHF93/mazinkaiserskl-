@@ -1,0 +1,20 @@
+# Mazinkaiser AI backend
+# ─────────────────────────────────────────────────────────────────────────────
+# Canonical metadata: pyproject.toml (this file is a convenience for pip-only flows).
+#
+# Setup (PowerShell), from backend/ directory:
+#   python -m venv .venv
+#   .\.venv\Scripts\python -m pip install -U pip wheel
+#   .\.venv\Scripts\pip install -r requirements.txt
+#
+# Or from repo root (after creating backend\.venv as above):
+#   backend\.venv\Scripts\pip install -r backend\requirements.txt
+#
+# Installs editable `mazinkaiser` plus runtime deps and dev extras: pytest,
+# pytest-asyncio, ruff, mypy.
+#
+# Frozen pins generated from this repo’s .venv live in requirements.freeze.txt
+# (exact versions + transitive deps — no editable line). Typical use after a
+# prod/stage clone: pip install -r requirements.freeze.txt && pip install -e "." --no-deps
+# or keep dev flow with this file’s `-e .[dev]` only.
+-e .[dev]

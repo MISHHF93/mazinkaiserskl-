@@ -1,0 +1,337 @@
+/**
+ * Official Mazinkaiser cinematic design language — tokens + motion.
+ * Imported from index.css; components use semantic vars + Tailwind `@theme` colors.
+ */
+
+@theme inline {
+  /* Typography — tactical / mechanical hierarchy */
+  --font-display: "Orbitron", "Exo 2", sans-serif;
+  --font-body: "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  --font-mono-hud: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+  --font-mono: var(--font-mono-hud);
+
+  /* Kaiser black (armor / deep cockpit) */
+  --color-mzk-black: #0a0a0f;
+  --color-mzk-black-raised: #11131a;
+  --color-mzk-black-plate: #151821;
+
+  /* Photon red — reactor hazard / combat */
+  --color-mzk-photon-red-deep: #8b0000;
+  --color-mzk-photon-red: #b11226;
+  --color-mzk-photon-red-hot: #d11f3a;
+
+  /* Kaiser silver — trim / plating */
+  --color-mzk-silver: #c0c7d1;
+  --color-mzk-silver-dim: #aeb6c2;
+  --color-mzk-silver-bright: #d9e1ea;
+
+  /* Photon gold — elite / synchro / Kaiser blade */
+  --color-mzk-gold: #ffd700;
+  --color-mzk-gold-ember: #ffb800;
+  --color-mzk-gold-core: #ffc93c;
+
+  /* Energy blue-violet — eyes / Plasma / hologram */
+  --color-mzk-plasma: #5a5dff;
+  --color-mzk-plasma-violet: #7a5cff;
+  --color-mzk-plasma-ice: #5e8bff;
+
+  --color-mzk-reactor-white: #f5f7fa;
+  --color-mzk-white-pure: #ffffff;
+
+  --color-mzk-warning-orange: #ff6b00;
+  --color-mzk-warning-flare: #ff8c00;
+
+  --color-mzk-danger-purple: #7d3cff;
+  --color-mzk-danger-purple-hot: #9d4edd;
+
+  /* Semantic aliases consumed by legacy modules */
+  --color-cockpit-bg: var(--color-mzk-black);
+  --color-cockpit-panel: color-mix(in srgb, var(--color-mzk-black-plate) 88%, transparent);
+  --color-kaiser: var(--color-mzk-plasma-ice);
+  --color-kaiser-dim: color-mix(in srgb, var(--color-mzk-plasma) 18%, transparent);
+  --color-alert: var(--color-mzk-photon-red-hot);
+
+  /* Motion — heavy / industrial (avoid bouncy consumer curves) */
+  --ease-mzk-heavy: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-mzk-reactor: cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-mzk-snap: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-mzk-short: 0.22s;
+  --duration-mzk-panel: 0.42s;
+  --duration-mzk-cinematic: 0.72s;
+
+  /* Reactor rhythm — cockpit root sets --mzk-photon-01 etc. */
+  --mzk-photon-01: 0.72;
+  --mzk-heat-01: 0.12;
+  --mzk-sync-01: 0.85;
+}
+
+@layer utilities {
+  /* Holographic scan line crawl */
+  @keyframes mzk-tactical-scan {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    8% {
+      opacity: 0.55;
+    }
+    92% {
+      opacity: 0.45;
+    }
+    100% {
+      transform: translateY(100vh);
+      opacity: 0;
+    }
+  }
+
+  /* Radar ping */
+  @keyframes mzk-radar-ring {
+    0% {
+      transform: scale(0.94);
+      opacity: 0.35;
+    }
+    70% {
+      opacity: 0.08;
+    }
+    100% {
+      transform: scale(1.35);
+      opacity: 0;
+    }
+  }
+
+  /* Reactor chest pulse driven by cockpit CSS vars */
+  @keyframes mzk-reactor-field {
+    0%,
+    100% {
+      opacity: calc(0.18 + var(--mzk-photon-01, 0.7) * 0.12);
+      filter: hue-rotate(0deg);
+    }
+    50% {
+      opacity: calc(0.28 + var(--mzk-photon-01, 0.7) * 0.22);
+      filter: hue-rotate(-8deg);
+    }
+  }
+
+  @keyframes mzk-grid-drift {
+    0% {
+      background-position: 0 0, 0 0, 0 0;
+    }
+    100% {
+      background-position: 0 48px, 64px 0, -32px 32px;
+    }
+  }
+
+  @keyframes mzk-glint {
+    0%,
+    100% {
+      opacity: 0.88;
+      transform: scaleY(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scaleY(1.1);
+    }
+  }
+
+  @keyframes mzk-michalo {
+    0%,
+    100% {
+      box-shadow:
+        0 0 20px color-mix(in srgb, var(--color-mzk-gold-core) 30%, transparent),
+        inset 0 0 16px color-mix(in srgb, var(--color-mzk-gold) 14%, transparent);
+    }
+    50% {
+      box-shadow:
+        0 0 40px color-mix(in srgb, var(--color-mzk-warning-flare) 38%, transparent),
+        inset 0 0 20px color-mix(in srgb, var(--color-mzk-gold) 22%, transparent);
+    }
+  }
+
+  @keyframes mzk-micwash {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 0.82;
+    }
+  }
+
+  @keyframes mzk-scan-drift {
+    0% {
+      transform: rotate(0deg) scale(1.01);
+      opacity: 0.22;
+    }
+    50% {
+      transform: rotate(2deg) scale(1.03);
+      opacity: 0.48;
+    }
+    100% {
+      transform: rotate(0deg) scale(1.01);
+      opacity: 0.22;
+    }
+  }
+
+  @keyframes mzk-overdrive {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes mzk-nova {
+    0%,
+    100% {
+      opacity: 0.78;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.035);
+    }
+  }
+
+  @keyframes mzk-chargepulse {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes mzk-corepulse {
+    0%,
+    100% {
+      transform: translateX(-50%) scaleX(1);
+      opacity: 0.72;
+    }
+    50% {
+      transform: translateX(-50%) scaleX(1.06);
+      opacity: 1;
+    }
+  }
+
+  @keyframes mzk-move-vignette {
+    0%,
+    100% {
+      filter: brightness(1.02) contrast(1.03);
+    }
+    50% {
+      filter: brightness(1.1) contrast(1.06);
+    }
+  }
+
+  @keyframes mzk-velocity-slash {
+    0% {
+      transform: skewX(-6deg) translateX(-12%);
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 0.7;
+    }
+    100% {
+      transform: skewX(-6deg) translateX(12%);
+      opacity: 0.28;
+    }
+  }
+
+  .animate-mzk-glint {
+    animation: mzk-glint 1.25s var(--ease-mzk-reactor) infinite;
+  }
+  .animate-mzk-michalo {
+    animation: mzk-michalo 2.1s var(--ease-mzk-reactor) infinite;
+  }
+  .animate-mzk-micwash {
+    animation: mzk-micwash 2.4s var(--ease-mzk-reactor) infinite;
+  }
+  .animate-mzk-scan-drift {
+    animation: mzk-scan-drift 7.5s var(--ease-mzk-reactor) infinite;
+  }
+  .animate-mzk-overdrive {
+    animation: mzk-overdrive 6.8s linear infinite;
+  }
+  .animate-mzk-nova {
+    animation: mzk-nova 1.45s var(--ease-mzk-heavy) infinite;
+  }
+  .animate-mzk-chargepulse {
+    animation: mzk-chargepulse 0.58s steps(4, start) infinite;
+  }
+  .animate-mzk-corepulse {
+    animation: mzk-corepulse 1.15s var(--ease-mzk-reactor) infinite;
+  }
+  .animate-mzk-move-vignette {
+    animation: mzk-move-vignette 2.2s var(--ease-mzk-reactor) infinite;
+  }
+  .animate-mzk-tactical-scan {
+    animation: mzk-tactical-scan 10s linear infinite;
+  }
+  .animate-mzk-grid-drift {
+    animation: mzk-grid-drift 38s linear infinite;
+  }
+  .animate-mzk-reactor-field {
+    animation: mzk-reactor-field 9.8s var(--ease-mzk-reactor) infinite;
+  }
+
+  /*
+   * Stable cockpit — disable looping Mazinkaiser cinematic utilities (ambient grid / reactor / HUD halos).
+   * Keyframes stay documented above; classes remain on DOM for layering without motion shimmer.
+   */
+  .animate-mzk-glint,
+  .animate-mzk-michalo,
+  .animate-mzk-micwash,
+  .animate-mzk-scan-drift,
+  .animate-mzk-overdrive,
+  .animate-mzk-nova,
+  .animate-mzk-chargepulse,
+  .animate-mzk-corepulse,
+  .animate-mzk-move-vignette,
+  .animate-mzk-tactical-scan,
+  .animate-mzk-grid-drift,
+  .animate-mzk-reactor-field {
+    animation: none !important;
+  }
+
+  /* Glow presets */
+  .mzk-glow-photon {
+    box-shadow:
+      0 0 28px color-mix(in srgb, var(--color-mzk-photon-red) 42%, transparent),
+      inset 0 0 28px color-mix(in srgb, var(--color-mzk-photon-red-deep) 18%, transparent);
+  }
+  .mzk-glow-plasma {
+    box-shadow:
+      0 0 32px color-mix(in srgb, var(--color-mzk-plasma-violet) 45%, transparent),
+      0 0 72px color-mix(in srgb, var(--color-mzk-plasma) 22%, transparent);
+  }
+  .mzk-glow-gold {
+    box-shadow:
+      0 0 36px color-mix(in srgb, var(--color-mzk-gold) 42%, transparent),
+      inset 0 0 20px color-mix(in srgb, var(--color-mzk-gold-ember) 15%, transparent);
+  }
+  .mzk-text-reactor {
+    color: var(--color-mzk-reactor-white);
+    text-shadow:
+      0 0 1px rgba(0, 0, 0, 1),
+      0 0 18px color-mix(in srgb, var(--color-mzk-plasma-ice) 42%, transparent);
+  }
+
+  /* Holographic panel skin */
+  .mzk-panel-skin::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0.5;
+    background: linear-gradient(
+      146deg,
+      color-mix(in srgb, var(--color-mzk-plasma-ice) 8%, transparent) 0%,
+      transparent 40%,
+      transparent 62%,
+      color-mix(in srgb, var(--color-mzk-photon-red) 6%, transparent) 100%
+    );
+    pointer-events: none;
+  }
+}

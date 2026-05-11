@@ -1,0 +1,38 @@
+@import "tailwindcss";
+@import "./styles/mazinkaiser-theme.css";
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--color-mzk-black);
+  color: color-mix(in srgb, var(--color-mzk-reactor-white) 88%, var(--color-mzk-silver-dim));
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background-image:
+    radial-gradient(ellipse 115% 70% at 50% -20%, color-mix(in srgb, var(--color-mzk-plasma) 14%, transparent), transparent),
+    radial-gradient(ellipse 55% 45% at 100% 20%, color-mix(in srgb, var(--color-mzk-photon-red-deep) 9%, transparent), transparent),
+    radial-gradient(ellipse 50% 40% at 0% 80%, color-mix(in srgb, var(--color-mzk-plasma-ice) 6%, transparent), transparent),
+    linear-gradient(
+      180deg,
+      var(--color-mzk-black-raised) 0%,
+      var(--color-mzk-black) 38%,
+      #050508 100%
+    );
+}
+
+h1,
+h2,
+.font-display-scope h1,
+.font-display-scope h2 {
+  font-family: var(--font-display), sans-serif;
+}
+
+.font-hud-mono {
+  font-family: var(--font-mono-hud), monospace;
+}

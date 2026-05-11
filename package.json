@@ -1,0 +1,18 @@
+{
+  "name": "mazinkaiser-ai",
+  "private": true,
+  "description": "Repo root — run npm scripts here; app package is in frontend/",
+  "scripts": {
+    "start": "npm --prefix frontend run dev",
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "clean": "npm --prefix frontend run clean",
+    "rebuild": "npm --prefix frontend run rebuild",
+    "lint": "npm --prefix frontend run lint",
+    "test": "npm --prefix frontend run test",
+    "preview": "npm --prefix frontend run preview",
+    "sync:skl-glb": "npm --prefix frontend run sync:skl-glb",
+    "inspect:glb": "npm --prefix frontend run inspect:glb",
+    "install": "npm install --prefix frontend"
+  }
+}
