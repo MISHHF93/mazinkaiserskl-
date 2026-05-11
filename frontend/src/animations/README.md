@@ -1,1 +1,1 @@
-Shared motion presets (Framer **variants**, springs) for HUD + avatar. Avoid duplicating magic easing values across components.
+Project hub: **[`../../../README.md`](../../../README.md)**.

@@ -20,12 +20,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@mazinkaiser/shared-types": "file:../packages/shared-types",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "framer-motion": "^12.38.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -9,7 +9,7 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 from mazinkaiser.core.config import Settings, get_settings
 from mazinkaiser.core.request_trace import get_trace_id

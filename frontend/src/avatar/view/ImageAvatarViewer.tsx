@@ -9,6 +9,7 @@ import {
 } from '../constants'
 import { readDevAvatarFixture } from './devAvatarFixture'
 import { GlbHullMissingNotice } from './GlbHullMissingNotice'
+import type { CockpitExperienceMode } from '../../components/cockpit/cockpitExperienceMode'
 import { MazinkaiserGlbInspector, type GlbInspectorStatus } from './MazinkaiserGlbInspector'
 import { SKLModelViewer, type HullViewportState } from './SKLModelViewer'
 
@@ -19,6 +20,7 @@ export type MazinkaiserStudioState = HullViewportState
 export type ImageAvatarViewerProps = {
   presentation: AvatarPresentation
   movePlayback?: SklMovePlaybackSnapshot
+  cockpitExperienceMode?: CockpitExperienceMode
   /**
    * Hull-based UX — the SKL shell fills the cockpit stage; `hudOverlay` mounts instruments on the hull over WebGL.
    * When false, framed panel layout (narrow twin column) for legacy contexts.
@@ -28,7 +30,13 @@ export type ImageAvatarViewerProps = {
 }
 
 export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
-  const { presentation: p, hullSurface = false, hudOverlay, movePlayback } = props
+  const {
+    presentation: p,
+    hullSurface = false,
+    hudOverlay,
+    movePlayback,
+    cockpitExperienceMode,
+  } = props
   const fixture = useMemo(() => readDevAvatarFixture(), [])
   const fixtureForceAbsent = fixture === 'glb-absent'
 
@@ -101,7 +109,7 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
     : 'absolute inset-[3px] overflow-hidden rounded-[1.2rem] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_16%,transparent)] sm:inset-[4px]'
 
   const twinColumnClass = hullSurface ?
-      'relative mx-0 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-clip px-[2px]'
+      'relative mx-0 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-clip'
     : `relative mx-auto w-full min-w-0 overflow-x-clip px-[2px] ${glbAbsent ? 'max-w-full' : 'max-w-[min(480px,98vw)]'}`
 
   const sklViewportClass = hullSurface ? 'relative min-h-0 flex-1 min-w-0' : 'relative min-h-[min(42vh,520px)] flex-1 min-w-0'
@@ -117,6 +125,7 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
                   key={`skl-view-${sklViewerMountKey}`}
                   presentation={p}
                   movePlayback={movePlayback ?? undefined}
+                  cockpitExperienceMode={cockpitExperienceMode}
                   forceError={fixtureForceAbsent}
                   onHullState={onViewportHull}
                 />
@@ -127,13 +136,13 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
                 ) : null}
               </div>
               <div
-                className={`relative shrink-0 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_18%,transparent)] bg-[color-mix(in_srgb,black_55%,transparent)] px-2 py-1.5 ${
+                className={`relative shrink-0 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_14%,transparent)] bg-[color-mix(in_srgb,black_50%,transparent)] px-1.5 py-1 ${
                   hullSurface ? 'z-[30]' : 'z-[16]'
                 }`}
               >
                 <button
                   type="button"
-                  className={`rounded-lg px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors ${
+                  className={`rounded-md px-2 py-1 font-mono text-[9px] uppercase tracking-[0.16em] transition-colors ${
                     structureReportOpen ?
                       'bg-[color-mix(in_srgb,var(--color-mzk-plasma)_22%,black)] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_92%,white)]'
                     : 'text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,var(--color-mzk-plasma-ice)_15%)] hover:bg-white/5'

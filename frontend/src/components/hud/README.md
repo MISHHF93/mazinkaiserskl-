@@ -1,1 +1,1 @@
-Telemetry gauges, alert strip, tactical banners — pure presentational building blocks.
+Project hub: **[`../../../../README.md`](../../../../README.md)**.

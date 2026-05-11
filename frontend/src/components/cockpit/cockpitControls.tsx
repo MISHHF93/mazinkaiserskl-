@@ -1,5 +1,9 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
 
+/** Angular SKL panel — aggressive corners, smoke gunmetal fill */
+export const SIM_SKL_ANGULAR_PANEL =
+  'relative [clip-path:polygon(0_0,calc(100%-10px)_0,100%_10px,100%_100%,10px_100%,0_calc(100%-10px))] border border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_32%,var(--color-mzk-smoke-panel)_18%)] bg-[color-mix(in_srgb,var(--color-mzk-gunmetal)_88%,black)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-inferno-yellow)_12%,transparent)]'
+
 /** Low-fill bezel — reads as machined HUD hull, not a floating OS window (hull deck + dock sheets). */
 export const SIM_HUD_BEZEL_PANEL =
   'relative rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_28%,transparent)] bg-[color-mix(in_srgb,#03050c_76%,transparent)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-plasma-ice)_12%,transparent),0_6px_28px_rgba(0,0,0,0.55)] backdrop-blur-xl before:pointer-events-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[color-mix(in_srgb,var(--color-mzk-plasma)_35%,transparent)] before:to-transparent'
@@ -12,7 +16,7 @@ export function HudDeckGrip({ children, className = '', ...rest }: HTMLAttribute
   return (
     <div
       {...rest}
-      className={`relative flex flex-col gap-1 rounded-bl-[3px] border-b-2 border-l-2 border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_42%,transparent)] border-r-0 border-t-0 bg-[color-mix(in_srgb,#020308_62%,transparent)] px-2 py-1.5 pl-2.5 shadow-[inset_-1px_-1px_0_color-mix(in_srgb,var(--color-mzk-plasma)_8%,transparent)] backdrop-blur-md ${className}`}
+      className={`relative flex flex-col gap-0.5 rounded-bl-[3px] border-b-2 border-l-2 border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_42%,transparent)] border-r-0 border-t-0 bg-[color-mix(in_srgb,#020308_62%,transparent)] px-1.5 py-1 pl-2 shadow-[inset_-1px_-1px_0_color-mix(in_srgb,var(--color-mzk-plasma)_8%,transparent)] backdrop-blur-md ${className}`}
     >
       <span
         aria-hidden
@@ -32,7 +36,7 @@ export function HudActuatorCluster({ children, className = '', ...rest }: HTMLAt
   return (
     <div
       {...rest}
-      className={`relative flex flex-wrap items-center justify-end gap-0.5 rounded-br-[3px] border-b-2 border-r-2 border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_42%,transparent)] border-l-0 border-t-0 bg-[color-mix(in_srgb,#020308_62%,transparent)] py-1.5 pl-2 pr-1 shadow-[inset_1px_-1px_0_color-mix(in_srgb,var(--color-mzk-plasma)_8%,transparent)] backdrop-blur-md ${className}`}
+      className={`relative flex flex-wrap items-center justify-end gap-0.5 rounded-br-[3px] border-b-2 border-r-2 border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_42%,transparent)] border-l-0 border-t-0 bg-[color-mix(in_srgb,#020308_62%,transparent)] py-1 pl-1.5 pr-0.5 shadow-[inset_1px_-1px_0_color-mix(in_srgb,var(--color-mzk-plasma)_8%,transparent)] backdrop-blur-md ${className}`}
     >
       <span
         aria-hidden
@@ -73,11 +77,11 @@ export const SIM_HUD_SELECT =
  * viewer icon rail (Fit / Gear / …) so controls do not overlap.
  */
 export const SIM_HULL_DECK_ANCHOR =
-  'pointer-events-auto absolute z-[105] bottom-[max(0.3rem,env(safe-area-inset-bottom))] left-2 right-[6.75rem] max-h-[min(50dvh,560px)] sm:left-3 sm:bottom-3 sm:right-[7.25rem] flex flex-col justify-end'
+  'pointer-events-auto absolute z-[105] bottom-[max(0.15rem,env(safe-area-inset-bottom))] left-1.5 right-[7.5rem] max-h-[min(42dvh,480px)] sm:left-2 sm:bottom-2 sm:right-[8rem] md:right-[8.25rem] flex flex-col justify-end'
 
 /** Top-right telemetry chips: stays inside viewport; clear of SKL dock on narrow widths. */
 export const SIM_HUD_METRICS_ANCHOR =
-  'absolute z-[105] top-2 right-2 flex max-w-[min(calc(100%-8rem),30rem)] flex-wrap justify-end gap-0.5 pt-0.5 pr-0.5 sm:top-2.5 sm:right-2.5'
+  'absolute z-[105] top-1 right-1 flex max-w-[min(calc(100%-7.25rem),30rem)] flex-wrap justify-end gap-px px-0.5 pt-0.5 sm:top-2 sm:right-2'
 
 /** SKL viewer controls dock — above hull deck z-index so the rail stays clickable. */
 export const SIM_SKL_VIEWER_DOCK_Z = 'z-[110]'

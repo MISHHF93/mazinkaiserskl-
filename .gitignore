@@ -13,6 +13,9 @@ logs/
 node_modules/
 frontend/dist/
 
+# Python / tooling artifacts
+backend/build/
+
 .idea/
 .vscode/
 *.log

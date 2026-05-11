@@ -28,6 +28,8 @@ import * as THREE from 'three'
 import { MOUSE } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import type { AvatarPresentation, SklMovePlaybackSnapshot } from '../presentation/types'
+import type { CockpitExperienceMode } from '../../components/cockpit/cockpitExperienceMode'
+import type { CameraMode } from '@mazinkaiser/shared-types'
 import { SklMoveAnimationPlayback } from './SklMoveAnimationPlayback'
 import {
   MAZINKAISER_SKL_GLB_PUBLIC_URL,
@@ -468,8 +470,8 @@ function SklCameraTelemetry({
 }
 
 /**
- * Snap orbit pivot to the hull surface under the pointer — wheel zoom + double-click so face/hands aren&apos;t locked to chest height.
- * Runs in capture phase before OrbitControls dolleys; keeps world-horizontal pan (`screenSpacePanning=false`).
+ * Snap orbit pivot to the hull surface under the pointer on double-click only.
+ * Wheel zoom uses OrbitControls `zoomToCursor` so dolly aims at the cursor without retargeting each tick.
  */
 function SklPointerRaycastOrbitFocus({ rootRef }: { rootRef: RefObject<THREE.Group | null> }) {
   const camera = useThree((s) => s.camera)
@@ -505,17 +507,12 @@ function SklPointerRaycastOrbitFocus({ rootRef }: { rootRef: RefObject<THREE.Gro
       ctrl.update()
     }
 
-    const onWheelCapture = (e: WheelEvent) => {
-      focusPivotAtClient(e.clientX, e.clientY)
-    }
     const onDblClick = (e: MouseEvent) => {
       focusPivotAtClient(e.clientX, e.clientY)
     }
 
-    el.addEventListener('wheel', onWheelCapture, { capture: true })
     el.addEventListener('dblclick', onDblClick)
     return () => {
-      el.removeEventListener('wheel', onWheelCapture, { capture: true })
       el.removeEventListener('dblclick', onDblClick)
     }
   }, [gl.domElement, camera, controls, raycaster, rootRef])
@@ -562,6 +559,43 @@ const SKL_MOVE_PLAYBACK_IDLE: SklMovePlaybackSnapshot = {
   moveLabel: undefined,
 }
 
+/** Aligns with `@mazinkaiser/shared-types` {@link CameraMode} — canonical camera presets for SKL hero framing. */
+export type SklViewCameraPresetId = CameraMode
+
+function experienceToCameraPreset(m: CockpitExperienceMode): SklViewCameraPresetId {
+  switch (m) {
+    case 'MOVE_DEMO':
+    case 'FINAL_COUNT':
+      return 'move'
+    case 'DIAGNOSTIC':
+      return 'diagnostic'
+    case 'COMBAT_READY':
+      return 'cinematic'
+    default:
+      return 'pilot'
+  }
+}
+
+function snapOrbitPolarToPreset(
+  camera: THREE.PerspectiveCamera,
+  controls: OrbitControlsImpl,
+  preset: SklViewCameraPresetId,
+) {
+  const phi: Record<SklViewCameraPresetId, number> = {
+    pilot: 1.34,
+    cinematic: 1.18,
+    diagnostic: 1.52,
+    move: 1.12,
+  }
+  const offset = new THREE.Vector3().copy(camera.position).sub(controls.target)
+  const sp = new THREE.Spherical().setFromVector3(offset)
+  sp.phi = phi[preset]
+  offset.setFromSpherical(sp)
+  camera.position.copy(controls.target).add(offset)
+  camera.updateProjectionMatrix()
+  controls.update()
+}
+
 type SklLoadedProps = {
   url: string
   settings: MazinkaiserGlbViewerSettings
@@ -574,6 +608,7 @@ type SklLoadedProps = {
   onCamTelemetry: (t: { distance: number; target: [number, number, number] }) => void
   presentation: AvatarPresentation
   movePlayback: SklMovePlaybackSnapshot
+  cameraPreset: SklViewCameraPresetId
 }
 
 function SklLoadedModel(props: SklLoadedProps) {
@@ -589,6 +624,7 @@ function SklLoadedModel(props: SklLoadedProps) {
     onCamTelemetry,
     presentation,
     movePlayback,
+    cameraPreset,
   } = props
 
   const onDigestRef = useRef(onDigest)
@@ -605,6 +641,7 @@ function SklLoadedModel(props: SklLoadedProps) {
   const rootRef = useRef<THREE.Group>(null)
   const { camera, gl } = useThree()
   const controlsRef = useRef<OrbitControlsImpl>(null)
+  const presetSnapTimerRef = useRef<number>(0)
   const keyLightRef = useRef<THREE.DirectionalLight>(null)
   const readyOnce = useRef(false)
   const boxHelper = useMemo(() => new THREE.Box3Helper(new THREE.Box3(), new THREE.Color(0x00e5ff)), [])
@@ -630,9 +667,10 @@ function SklLoadedModel(props: SklLoadedProps) {
     const od = Math.min(1, Math.max(0, presentation.overdriveSheen))
     const al = Math.min(1, Math.max(0, presentation.alertShroud))
     const eye = Math.min(1, Math.max(0, presentation.eyeGlow))
+    const spk = presentation.semantic === 'SPEAKING' ? 1 : 0
     const cin = presentation.cinematicMove ? 1 : 0
     const moveActive = movePlayback.phase !== 'idle' ? 1 : 0
-    const keyMul = 1 + 0.42 * r + 0.2 * n + 0.12 * od + 0.16 * cin + 0.06 * eye + 0.14 * moveActive - 0.09 * al
+    const keyMul = 1 + 0.42 * r + 0.2 * n + 0.12 * od + 0.16 * cin + 0.06 * eye + 0.14 * moveActive + 0.12 * spk - 0.09 * al
     const rimExtra = 1 + 0.5 * n + 0.32 * r + 0.18 * od + 0.14 * cin + 0.12 * moveActive
     const cockpitAccentMul = 1 + 0.38 * r + 0.32 * n + 0.22 * moveActive
     return { keyMul, rimExtra, cockpitAccentMul }
@@ -642,6 +680,7 @@ function SklLoadedModel(props: SklLoadedProps) {
     presentation.overdriveSheen,
     presentation.alertShroud,
     presentation.eyeGlow,
+    presentation.semantic,
     presentation.cinematicMove,
     movePlayback.phase,
   ])
@@ -775,6 +814,16 @@ function SklLoadedModel(props: SklLoadedProps) {
     c.mouseButtons = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN }
   }, [url])
 
+  useEffect(() => {
+    window.clearTimeout(presetSnapTimerRef.current)
+    presetSnapTimerRef.current = window.setTimeout(() => {
+      const ctrl = controlsRef.current
+      const cam = camera as THREE.PerspectiveCamera
+      if (ctrl) snapOrbitPolarToPreset(cam, ctrl, cameraPreset)
+    }, 520)
+    return () => window.clearTimeout(presetSnapTimerRef.current)
+  }, [camera, cameraPreset, url])
+
   useFrame(() => {
     if (!showDebugBounds || !rootRef.current) return
     boxHelper.box.copy(new THREE.Box3().setFromObject(rootRef.current))
@@ -782,7 +831,7 @@ function SklLoadedModel(props: SklLoadedProps) {
 
   return (
     <>
-      <PerspectiveCamera makeDefault position={[0, 1.55, 5.4]} fov={settings.fov} near={0.08} far={240} />
+      <PerspectiveCamera makeDefault position={[0, 1.05, 6.05]} fov={settings.fov} near={0.08} far={240} />
       <OrbitControls
         ref={controlsRef}
         makeDefault
@@ -791,6 +840,8 @@ function SklLoadedModel(props: SklLoadedProps) {
         dampingFactor={settings.damping}
         enablePan
         enableZoom
+        /** Dollying scales toward cursor (three-stdlib); avoids juggling target each wheel tick. */
+        zoomToCursor
         /** World-horizontal pan on Y-up deck (screen-space pan feels misaligned vs grid / forward-back). */
         screenSpacePanning={false}
         minPolarAngle={0.01}
@@ -831,12 +882,22 @@ function SklLoadedModel(props: SklLoadedProps) {
       />
       <directionalLight
         position={[-3, 2, -6]}
-        intensity={1.1 * rimLightMul * presLightMul.rimExtra}
+        intensity={
+          1.18 *
+          rimLightMul *
+          presLightMul.rimExtra *
+          (lighting === 'INFERNO' || lighting === 'SKL_COCKPIT' ? 1.38 : 1)
+        }
         color="#ff3355"
       />
       <directionalLight
         position={[4, -1, 3]}
-        intensity={0.85 * rimLightMul * presLightMul.rimExtra}
+        intensity={
+          0.95 *
+          rimLightMul *
+          presLightMul.rimExtra *
+          (lighting === 'INFERNO' || lighting === 'SKL_COCKPIT' ? 1.32 : 1)
+        }
         color="#ffaa44"
       />
 
@@ -953,8 +1014,18 @@ export function SKLModelViewer(props: {
   onHullState?: (s: HullViewportState) => void
   forceError?: boolean
   movePlayback?: SklMovePlaybackSnapshot
+  cockpitExperienceMode?: CockpitExperienceMode
 }) {
-  const { presentation, onHullState, forceError, movePlayback = SKL_MOVE_PLAYBACK_IDLE } = props
+  const {
+    presentation,
+    onHullState,
+    forceError,
+    movePlayback = SKL_MOVE_PLAYBACK_IDLE,
+    cockpitExperienceMode,
+  } = props
+  const experienceMode: CockpitExperienceMode = cockpitExperienceMode ?? 'PILOT_VIEW'
+  const [cameraPresetUser, setCameraPresetUser] = useState<SklViewCameraPresetId | null>(null)
+  const effectiveCameraPreset = cameraPresetUser ?? experienceToCameraPreset(experienceMode)
   const res = useKaiserGlbModelResolution(forceError)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -1012,6 +1083,26 @@ export function SKLModelViewer(props: {
 
   const onModelReady = useCallback(() => {
     setModelReady(true)
+  }, [])
+
+  const fullScreenToggle = useCallback(() => {
+    const el = wrapRef.current
+    if (!el) return
+    if (document.fullscreenElement) void document.exitFullscreen()
+    else void el.requestFullscreen().catch(() => {})
+  }, [])
+
+  const requestFitAndPreset = useCallback(
+    (p: SklViewCameraPresetId) => {
+      setCameraPresetUser(p)
+      queueMicrotask(() => fitRef.current?.())
+    },
+    [],
+  )
+
+  const resetViewAndAutoCam = useCallback(() => {
+    setCameraPresetUser(null)
+    queueMicrotask(() => fitRef.current?.())
   }, [])
 
   const onFitBridgeReady = useCallback((fn: () => void) => {
@@ -1163,15 +1254,16 @@ export function SKLModelViewer(props: {
               onCamTelemetry={onCamTelemetry}
               presentation={presentation}
               movePlayback={movePlayback}
+              cameraPreset={effectiveCameraPreset}
             />
           </GltfCanvasErrorBoundary>
         </Canvas>
       </div>
 
       <div
-        className={`pointer-events-none absolute bottom-0 right-0 flex max-w-[calc(100vw-0.35rem)] flex-col items-end gap-1.5 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pr-[max(0.25rem,env(safe-area-inset-right,0px))] pl-1.5 pt-1.5 sm:bottom-2.5 sm:right-2.5 lg:bottom-3 lg:right-3 ${SIM_SKL_VIEWER_DOCK_Z}`}
+        className={`pointer-events-none absolute bottom-0 right-0 flex max-w-[calc(100vw-0.35rem)] flex-col items-end gap-1 pb-[max(0.15rem,env(safe-area-inset-bottom,0px))] pr-[max(0.15rem,env(safe-area-inset-right,0px))] pl-1 pt-1 sm:bottom-1.5 sm:right-1.5 sm:pb-1 sm:pr-1 md:bottom-2 md:right-2 ${SIM_SKL_VIEWER_DOCK_Z}`}
       >
-        <div className="pointer-events-auto flex w-auto flex-col items-end gap-1.5">
+        <div className="pointer-events-auto flex w-auto flex-col items-end gap-1">
           {hullDockExpanded && toolbarOpen ? (
             <div
               className={SIM_HUD_POPOVER_SHEET}
@@ -1238,7 +1330,7 @@ export function SKLModelViewer(props: {
                     </p>
                   </details>
                   <div className="flex flex-wrap gap-1.5">
-                    <CockpitPad className="text-[clamp(10px,2.4vw,11px)] px-2 py-1 pointer-coarse:min-h-11" onClick={() => fitRef.current?.()}>
+                    <CockpitPad className="text-[clamp(10px,2.4vw,11px)] px-2 py-1 pointer-coarse:min-h-11" onClick={resetViewAndAutoCam}>
                       Reset view
                     </CockpitPad>
                     <CockpitPad
@@ -1479,7 +1571,31 @@ export function SKLModelViewer(props: {
           ) : null}
 
           {!hullDockExpanded ?
-            <HudActuatorCluster className="gap-1 pr-2" onPointerDown={(e) => e.stopPropagation()}>
+            <div className="pointer-events-auto flex w-full max-w-[min(100vw,380px)] flex-col items-end gap-1">
+              <div className="flex flex-wrap justify-end gap-1">
+                <CockpitPad
+                  className="text-[clamp(8px,2vw,10px)] px-1.5 py-0.5 font-mono uppercase tracking-[0.08em]"
+                  onClick={() => requestFitAndPreset('cinematic')}
+                >
+                  Cinematic
+                </CockpitPad>
+                <CockpitPad
+                  className="text-[clamp(8px,2vw,10px)] px-1.5 py-0.5 font-mono uppercase tracking-[0.08em]"
+                  onClick={() => requestFitAndPreset('diagnostic')}
+                >
+                  Diagnostic
+                </CockpitPad>
+                <CockpitPad
+                  className="text-[clamp(8px,2vw,10px)] px-1.5 py-0.5 font-mono uppercase tracking-[0.08em]"
+                  onClick={() => requestFitAndPreset('pilot')}
+                >
+                  Pilot
+                </CockpitPad>
+                <CockpitPad className="text-[clamp(8px,2vw,10px)] px-1.5 py-0.5 font-mono uppercase tracking-[0.08em]" onClick={fullScreenToggle}>
+                  Fullscreen
+                </CockpitPad>
+              </div>
+              <HudActuatorCluster className="gap-1 pr-2" onPointerDown={(e) => e.stopPropagation()}>
               <ViewerIconButton
                 className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Fit hull in view"
@@ -1495,6 +1611,7 @@ export function SKLModelViewer(props: {
                 <SvgGear />
               </ViewerIconButton>
             </HudActuatorCluster>
+            </div>
           : <HudActuatorCluster className="gap-1 pr-2" onPointerDown={(e) => e.stopPropagation()}>
               <ViewerIconButton
                 className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!h-10 sm:!w-10 sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"

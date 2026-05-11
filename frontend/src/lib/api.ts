@@ -1,5 +1,10 @@
 import type { MazinkaiserCinematicScaleProfile, MechaHudState, PersonalityMode } from '../types'
 import { API_BASE } from '../config'
+import {
+  coerceCockpitEnvelope,
+  coerceCockpitMoveDemoResponse,
+  parseVoiceIngestResponse,
+} from '@mazinkaiser/shared-types'
 
 const prefix = `${API_BASE}/api/v1`
 
@@ -14,7 +19,22 @@ export async function fetchState(sessionId?: string | null): Promise<CockpitEnve
   if (sessionId) u.searchParams.set('session_id', sessionId)
   const r = await fetch(u.toString())
   if (!r.ok) throw new Error(`state ${r.status}`)
-  return r.json() as Promise<CockpitEnvelope>
+  const json: unknown = await r.json()
+  const coerced = coerceCockpitEnvelope(json)
+  if (coerced) {
+    const out: CockpitEnvelope = {
+      session_id: coerced.session_id,
+      state: coerced.state,
+    }
+    if (coerced.cinematic_scale_profile !== undefined) {
+      out.cinematic_scale_profile = coerced.cinematic_scale_profile
+    }
+    return out
+  }
+  if (import.meta.env.DEV) {
+    console.warn('[api] GET /cockpit/state response shape drift — using unchecked JSON')
+  }
+  return json as CockpitEnvelope
 }
 
 export async function postMode(sessionId: string | null, mode: PersonalityMode) {
@@ -24,7 +44,22 @@ export async function postMode(sessionId: string | null, mode: PersonalityMode) 
     body: JSON.stringify({ session_id: sessionId, mode }),
   })
   if (!r.ok) throw new Error(`mode ${r.status}`)
-  return r.json() as Promise<CockpitEnvelope>
+  const json: unknown = await r.json()
+  const coerced = coerceCockpitEnvelope(json)
+  if (coerced) {
+    const out: CockpitEnvelope = {
+      session_id: coerced.session_id,
+      state: coerced.state,
+    }
+    if (coerced.cinematic_scale_profile !== undefined) {
+      out.cinematic_scale_profile = coerced.cinematic_scale_profile
+    }
+    return out
+  }
+  if (import.meta.env.DEV) {
+    console.warn('[api] POST /cockpit/mode response shape drift — using unchecked JSON')
+  }
+  return json as CockpitEnvelope
 }
 
 export async function postDiagnostics(sessionId?: string | null) {
@@ -32,7 +67,22 @@ export async function postDiagnostics(sessionId?: string | null) {
   if (sessionId) u.searchParams.set('session_id', sessionId)
   const r = await fetch(u.toString(), { method: 'POST' })
   if (!r.ok) throw new Error(`diagnostics ${r.status}`)
-  return r.json() as Promise<CockpitEnvelope>
+  const json: unknown = await r.json()
+  const coerced = coerceCockpitEnvelope(json)
+  if (coerced) {
+    const out: CockpitEnvelope = {
+      session_id: coerced.session_id,
+      state: coerced.state,
+    }
+    if (coerced.cinematic_scale_profile !== undefined) {
+      out.cinematic_scale_profile = coerced.cinematic_scale_profile
+    }
+    return out
+  }
+  if (import.meta.env.DEV) {
+    console.warn('[api] POST /cockpit/diagnostics response shape drift — using unchecked JSON')
+  }
+  return json as CockpitEnvelope
 }
 
 export async function postMoveDemo(sessionId: string | null, move: string) {
@@ -42,12 +92,33 @@ export async function postMoveDemo(sessionId: string | null, move: string) {
     body: JSON.stringify({ session_id: sessionId, move }),
   })
   if (!r.ok) throw new Error(`move ${r.status}`)
-  return r.json() as Promise<{
+  const json: unknown = await r.json()
+  const coerced = coerceCockpitMoveDemoResponse(json)
+  if (coerced) {
+    const base: {
+      session_id: string
+      state: MechaHudState
+      move_batch: Record<string, unknown>
+      cinematic_scale_profile?: MazinkaiserCinematicScaleProfile
+    } = {
+      session_id: coerced.session_id,
+      state: coerced.state,
+      move_batch: (coerced.move_batch ?? {}) as Record<string, unknown>,
+    }
+    if (coerced.cinematic_scale_profile !== undefined) {
+      base.cinematic_scale_profile = coerced.cinematic_scale_profile
+    }
+    return base
+  }
+  if (import.meta.env.DEV) {
+    console.warn('[api] POST /cockpit/move-demo response shape drift — using unchecked JSON')
+  }
+  return json as {
     session_id: string
     state: MechaHudState
     move_batch: Record<string, unknown>
     cinematic_scale_profile?: MazinkaiserCinematicScaleProfile
-  }>
+  }
 }
 
 export async function fetchTactical() {
@@ -77,16 +148,7 @@ export async function fetchSessionConfig(sessionId?: string | null): Promise<Ses
   return r.json() as Promise<SessionConfig>
 }
 
-export type VoiceIngestResponse = {
-  session_id: string
-  raw_transcript: string
-  normalized_text: string
-  stt_provider: string
-  intent: string | null
-  parsed: { verb: string; tokens: string[]; confidence: number }
-  tts_hints: Record<string, unknown>
-  wake_routing: Record<string, unknown>
-}
+export type VoiceIngestResponse = import('@mazinkaiser/shared-types').VoiceIngestResponseWire
 
 export async function postVoiceIngest(
   sessionId: string | null,
@@ -104,7 +166,13 @@ export async function postVoiceIngest(
     }),
   })
   if (!r.ok) throw new Error(`voice ingest ${r.status}`)
-  return r.json() as Promise<VoiceIngestResponse>
+  const json: unknown = await r.json()
+  const parsed = parseVoiceIngestResponse(json)
+  if (parsed) return parsed
+  if (import.meta.env.DEV) {
+    console.warn('[api] POST /voice/ingest response shape drift — using unchecked JSON')
+  }
+  return json as VoiceIngestResponse
 }
 
 export async function putSessionConfig(

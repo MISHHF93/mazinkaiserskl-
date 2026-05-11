@@ -10,7 +10,7 @@ body,
 
 body {
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  background-color: var(--color-mzk-black);
+  background-color: var(--color-mzk-gunmetal);
   color: color-mix(in srgb, var(--color-mzk-reactor-white) 88%, var(--color-mzk-silver-dim));
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -20,8 +20,8 @@ body {
     radial-gradient(ellipse 50% 40% at 0% 80%, color-mix(in srgb, var(--color-mzk-plasma-ice) 6%, transparent), transparent),
     linear-gradient(
       180deg,
-      var(--color-mzk-black-raised) 0%,
-      var(--color-mzk-black) 38%,
+      color-mix(in srgb, var(--color-mzk-gunmetal) 92%, black) 0%,
+      var(--color-mzk-gunmetal) 38%,
       #050508 100%
     );
 }

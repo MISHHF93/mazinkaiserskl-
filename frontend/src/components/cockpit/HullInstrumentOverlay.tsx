@@ -1,8 +1,11 @@
 import type { FormEvent } from 'react'
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import type { MechaHudState, PersonalityMode } from '../../types'
 import { KAISER_MOVES, PERSONALITY_MODES } from '../../types'
 import type { VoiceConsoleSlice, VoicePushToTalkProps } from './CommandConsole'
+import { CockpitWaveformStrip } from './CockpitWaveformStrip'
+import type { CockpitExperienceMode } from './cockpitExperienceMode'
+import { cockpitExperienceLabel } from './cockpitExperienceMode'
 import {
   CockpitPad,
   CockpitPrimaryActuator,
@@ -13,6 +16,7 @@ import {
   SIM_HULL_DECK_ANCHOR,
   SIM_ACTION_ROW,
   SIM_CTL_H,
+  SIM_SKL_ANGULAR_PANEL,
   SIM_TAB_STRIP,
   SIM_TAB_BTN,
   SIM_TAB_BTN_ACTIVE,
@@ -21,6 +25,11 @@ import { formatHudEnum } from './cockpitUtils'
 
 /** Props for instrumentation composited on the SKL hull surface (SIMULATION). */
 export type HullInstrumentOverlayProps = {
+  cockpitExperienceMode: CockpitExperienceMode
+  diagnosticSurfaceActive: boolean
+  onDiagnosticSurfaceChange: (open: boolean) => void
+  ttsSpeaking: boolean
+
   hud: MechaHudState | null
   /** Avatar semantic label — shown on lab deck when hull chrome hides the hull footer ribbon. */
   twinStateLabel: string
@@ -51,10 +60,10 @@ function MiniChip({ k, v, title }: { k: string; v: string; title?: string }) {
   return (
     <span
       title={title}
-      className="rounded border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_35%,transparent)] bg-black/78 px-[clamp(4px,1vw,8px)] py-[clamp(2px,0.5vw,5px)] font-mono text-[clamp(8px,1.8vw,10px)] uppercase tracking-[0.06em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_92%,white)] shadow-[0_2px_12px_rgba(0,0,0,0.65)] backdrop-blur-md"
+      className="rounded border border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_38%,var(--color-mzk-smoke-panel)_22%)] bg-black/82 px-[clamp(3px,0.9vw,7px)] py-[clamp(2px,0.45vw,4px)] font-mono text-[clamp(8px,1.7vw,10px)] uppercase tracking-[0.05em] text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_92%,white)] shadow-[0_2px_10px_rgba(0,0,0,0.6)] backdrop-blur-md"
     >
-      <span className="text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">{k}</span>{' '}
-      <span className="text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_92%,white)]">{v}</span>
+      <span className="text-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_82%,transparent)]">{k}</span>{' '}
+      <span className="text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_94%,white)]">{v}</span>
     </span>
   )
 }
@@ -63,13 +72,13 @@ function MicroBar({ label, pct, title }: { label: string; pct: number; title: st
   const p = Math.min(100, Math.max(0, pct))
   return (
     <div className="min-w-[min(56px,22vw)] flex-1" title={title}>
-      <div className="flex justify-between font-mono text-[clamp(8px,1.8vw,10px)] uppercase tracking-[0.05em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_92%,white)]">
+      <div className="flex justify-between font-mono text-[clamp(8px,1.8vw,10px)] uppercase tracking-[0.05em] text-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_92%,white)]">
         <span className="truncate">{label}</span>
         <span className="tabular-nums">{p.toFixed(0)}</span>
       </div>
-      <div className="mt-0.5 h-1 overflow-hidden rounded-sm bg-black/85 ring-1 ring-[color-mix(in_srgb,var(--color-mzk-plasma)_28%,black)]">
+      <div className="mt-0.5 h-1 overflow-hidden rounded-sm bg-black/85 ring-1 ring-[color-mix(in_srgb,var(--color-mzk-blood-energy)_32%,black)]">
         <div
-          className="h-full bg-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_55%,var(--color-mzk-plasma-violet)_35%)]"
+          className="h-full bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_55%,var(--color-mzk-inferno-yellow)_35%)]"
           style={{ width: `${p}%` }}
         />
       </div>
@@ -77,47 +86,64 @@ function MicroBar({ label, pct, title }: { label: string; pct: number; title: st
   )
 }
 
-/**
- * Laboratory / desktop-game hull deck — viewer-first: slim metrics, single consolidated control slab,
- * simple pads. Pointer-events mostly on the slab so the hull stays easy to orbit.
- */
 type DeckTab = 'command' | 'combat' | 'twin'
 
 const DECK_TABS: readonly { id: DeckTab; label: string }[] = [
   { id: 'command', label: 'Command' },
   { id: 'combat', label: 'Combat' },
-  { id: 'twin', label: 'Pilot' },
+  { id: 'twin', label: 'Twin' },
 ] as const
 
 export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
   const d = props.hud
+  const { diagnosticSurfaceActive, onDiagnosticSurfaceChange } = props
   const labEase = '[transition-timing-function:cubic-bezier(0.22,1,0.36,1)] duration-[var(--duration-mzk-short)]'
-  /** Viewer-first: start collapsed so the SKL viewport uses maximum area. */
-  const [deckExpanded, setDeckExpanded] = useState(false)
-  const [deckTab, setDeckTab] = useState<DeckTab>('command')
+  const [meterHudOpen, setMeterHudOpen] = useState(false)
+  const [drawerTab, setDrawerTab] = useState<DeckTab>('command')
   const deckTabId = useId()
+
+  useEffect(() => {
+    if (!diagnosticSurfaceActive) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onDiagnosticSurfaceChange(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [diagnosticSurfaceActive, onDiagnosticSurfaceChange])
 
   const focusAdjacentDeckTab = (dir: -1 | 1) => {
     const order = DECK_TABS.map((t) => t.id)
-    const i = order.indexOf(deckTab)
+    const i = order.indexOf(drawerTab)
     const next = (i + dir + order.length) % order.length
     const nextId = order[next]!
-    setDeckTab(nextId)
+    setDrawerTab(nextId)
     queueMicrotask(() => document.getElementById(`${deckTabId}-tab-${nextId}`)?.focus())
   }
 
   const activateDeckTab = (id: DeckTab) => {
-    setDeckTab(id)
+    setDrawerTab(id)
     queueMicrotask(() => document.getElementById(`${deckTabId}-tab-${id}`)?.focus())
   }
 
+  const waveformActive = props.subtitleStreaming || props.ttsSpeaking
+  const waveformHot = props.ttsSpeaking
+
   return (
-    <div role="region" aria-label="Hull lab deck" className="pointer-events-none absolute inset-0 min-h-0">
+    <div role="region" aria-label="Hull instrument layer" className="pointer-events-none absolute inset-0 min-h-0">
       <div className={`${SIM_HUD_METRICS_ANCHOR} pointer-events-auto`}>
+        <MiniChip k="Mode" title="Cockpit experience" v={cockpitExperienceLabel(props.cockpitExperienceMode)} />
         <MiniChip k="Twin" title={props.twinStateLabel} v={props.twinStateLabel.length > 18 ? `${props.twinStateLabel.slice(0, 18)}…` : props.twinStateLabel} />
         <MiniChip k="Alert" v={(d?.tactical_alert ?? '—').slice(0, 20)} />
-        {deckExpanded ?
+        {meterHudOpen ?
           <>
+            <button
+              type="button"
+              title="Hide gauges"
+              className="rounded border border-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_40%,transparent)] bg-black/80 px-1 py-0.5 font-mono text-[7px] uppercase text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_88%,white)]"
+              onClick={() => setMeterHudOpen(false)}
+            >
+              ×
+            </button>
             <MicroBar label="PH" pct={d?.photon_power_pct ?? 0} title="Photon power (%)" />
             <MicroBar label="SY" pct={d?.sync_rate_pct ?? 0} title="Sync rate (%)" />
             <MicroBar label="TH" pct={d?.heat_level_pct ?? 0} title="Thermal load (%)" />
@@ -126,37 +152,47 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
         : (
           <button
             type="button"
-            title="Show power bars in HUD"
-            className="rounded border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_30%,transparent)] bg-black/75 px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_78%,white)] shadow-sm backdrop-blur-sm hover:bg-black/90 sm:text-[9px]"
-            onClick={() => setDeckExpanded(true)}
+            title="Hull instrument gauges"
+            className="rounded border border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_35%,transparent)] bg-black/78 px-1.5 py-0.5 font-mono text-[7px] uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_88%,white)] shadow-sm backdrop-blur-sm hover:bg-black/90 sm:px-2 sm:text-[8px]"
+            onClick={() => setMeterHudOpen(true)}
           >
-            <span className="sm:hidden">Bars</span>
-            <span className="hidden sm:inline">Meters</span>
+            <span className="sm:hidden">G</span>
+            <span className="hidden sm:inline">Gauges</span>
           </button>
         )}
+        <button
+          type="button"
+          title="Open diagnostics — telemetry, moves, twin bus"
+          className={`rounded border px-1.5 py-0.5 font-mono text-[7px] uppercase tracking-[0.14em] sm:px-2 sm:text-[8px] ${
+            props.diagnosticSurfaceActive ?
+              'border-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_28%,black)] text-[var(--color-mzk-skull-bone)]'
+            : 'border-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_40%,transparent)] bg-black/75 text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_78%,white)] hover:bg-black/90'
+          }`}
+          onClick={() => props.onDiagnosticSurfaceChange(!props.diagnosticSurfaceActive)}
+        >
+          Diag
+        </button>
       </div>
 
       <div className={SIM_HULL_DECK_ANCHOR}>
         <HudDeckGrip
-          title={deckExpanded ? undefined : 'Kaiser command — More opens Command, Combat moves, and Pilot meters'}
-          className={
-            deckExpanded ?
-              'w-full min-h-0 max-h-[min(32dvh,300px)] overflow-y-auto overscroll-contain px-[clamp(0.3rem,1.4vw,0.65rem)] pb-1 pt-1 sm:max-h-[min(34dvh,340px)]'
-            : 'w-full px-1.5 pb-1.5 pt-1 sm:px-2'
-          }
+          title="Kaiser command — Diagnostics for full bus"
+          className={`${SIM_SKL_ANGULAR_PANEL} w-full px-1 pb-1 pt-0.5 sm:px-1.5`}
         >
-        {!deckExpanded ?
-          <>
+          <div className="flex w-full min-w-0 flex-col gap-1">
+            <CockpitWaveformStrip active={waveformActive} hot={waveformHot} />
             <p
-              className="line-clamp-1 border-b border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_14%,transparent)] pb-1 text-center font-mono text-[clamp(9px,2.2vw,11px)] font-medium leading-tight text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_94%,white)]"
-              style={{ textShadow: '0 0 12px color-mix(in srgb, var(--color-mzk-plasma-violet) 22%, transparent)' }}
+              className="line-clamp-2 hyphens-auto break-words border-b border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_22%,transparent)] pb-0.5 text-left font-mono text-[clamp(8px,1.85vw,10px)] font-medium leading-snug text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_94%,white)] sm:text-center"
+              style={{
+                textShadow: '0 0 12px color-mix(in srgb, var(--color-mzk-blood-energy) 35%, transparent)',
+              }}
               title={props.kaiserLine}
             >
               {props.kaiserLine}
             </p>
-            <form className="mt-1 w-full min-w-0" onSubmit={props.onCommandSubmit}>
-              <HudSegmentRail className="w-full flex-nowrap">
-                <div className="flex min-h-8 min-w-0 flex-[1_1_50%] items-center bg-[color-mix(in_srgb,black_55%,transparent)] px-2 py-0.5 sm:flex-[1_1_60%]">
+            <form className="w-full min-w-0" onSubmit={props.onCommandSubmit}>
+              <HudSegmentRail className="w-full flex-col sm:flex-row sm:flex-nowrap">
+                <div className="flex min-h-9 min-w-0 w-full flex-1 items-center bg-[color-mix(in_srgb,black_58%,transparent)] px-1.5 py-0.5 pointer-coarse:min-h-11 sm:min-h-8 sm:px-2">
                   <label htmlFor="hull-lab-cmd-mini" className="sr-only">
                     Directive
                   </label>
@@ -167,36 +203,41 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
                     placeholder="Directive…"
                     value={props.commandInput}
                     onChange={(e) => props.setCommandInput(e.target.value)}
-                    className="min-h-[28px] min-w-0 flex-1 border-0 bg-transparent py-0.5 font-[family-name:var(--font-body)] text-[clamp(10px,2.4vw,12px)] text-[var(--color-mzk-reactor-white)] outline-none placeholder:text-white/40 focus-visible:ring-0"
+                    className="min-h-[28px] min-w-0 flex-1 border-0 bg-transparent py-0.5 font-[family-name:var(--font-body)] text-[clamp(10px,2.4vw,12px)] text-[var(--color-mzk-skull-bone)] outline-none placeholder:text-white/40 focus-visible:ring-0"
                   />
                 </div>
-                <div className="flex min-h-8 items-stretch self-stretch border-l border-black/70">
-                  <CockpitPrimaryActuator
-                    type="submit"
-                    aria-label="Execute directive"
-                    className="!h-auto !min-h-8 !rounded-none !px-3 !py-1.5 !text-[9px] !tracking-[0.12em]"
+                <div className="flex min-h-9 w-full min-w-0 shrink-0 divide-x divide-black/70 border-t border-black/70 pointer-coarse:min-h-11 sm:min-h-8 sm:w-auto sm:border-t-0 sm:divide-x-0">
+                  <div className="flex min-h-9 min-w-0 flex-1 items-stretch pointer-coarse:min-h-11 sm:min-h-8 sm:flex-initial sm:border-l sm:border-black/70">
+                    <CockpitPrimaryActuator
+                      type="submit"
+                      aria-label="Execute directive"
+                      className="!h-auto w-full !min-h-9 !rounded-none !border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_45%,transparent)] !bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_18%,black)] !px-2.5 !py-1 !text-[9px] !tracking-[0.12em] text-[var(--color-mzk-skull-bone)] pointer-coarse:!min-h-11 sm:!min-h-8"
+                    >
+                      Go
+                    </CockpitPrimaryActuator>
+                  </div>
+                  <button
+                    type="button"
+                    className="flex min-h-9 min-w-[44px] shrink-0 flex-1 items-center justify-center bg-[color-mix(in_srgb,black_50%,transparent)] px-2 font-mono text-[8px] font-semibold uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_90%,white)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_14%,black)] active:translate-y-px pointer-coarse:min-h-11 sm:min-h-8 sm:flex-initial sm:border-l sm:border-black/70"
+                    onClick={() => {
+                      props.onDiagnosticSurfaceChange(true)
+                      setDrawerTab('command')
+                    }}
+                    title="Full diagnostics & sequence bus"
                   >
-                    Go
-                  </CockpitPrimaryActuator>
+                    Bus
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="flex min-h-8 min-w-[3rem] shrink-0 items-center justify-center border-l border-black/70 bg-[color-mix(in_srgb,black_50%,transparent)] px-2 font-mono text-[8px] font-semibold uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_90%,white)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_12%,black)] active:translate-y-px"
-                  onClick={() => setDeckExpanded(true)}
-                  title="Expand full command deck"
-                >
-                  More
-                </button>
               </HudSegmentRail>
             </form>
-            <HudSegmentRail className="mt-1 w-full justify-center">
+            <HudSegmentRail className="w-full justify-center">
               <button
                 type="button"
                 title="Hold to capture speech"
-                className={`${SIM_CTL_H} min-h-8 flex-1 shrink-0 border-0 px-2 font-mono text-[8px] font-semibold uppercase tracking-[0.08em] ${labEase} ${
+                className={`flex h-auto min-h-9 flex-1 shrink-0 border-0 px-2 py-1.5 font-mono text-[8px] font-semibold uppercase tracking-[0.08em] pointer-coarse:min-h-11 pointer-coarse:py-2 sm:min-h-8 sm:py-1 ${labEase} ${
                   props.avatarListening ?
-                    'border-[color-mix(in_srgb,var(--color-mzk-gold)_48%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-warning-orange)_22%,black)] text-[var(--color-mzk-reactor-white)]'
-                  : 'bg-[color-mix(in_srgb,black_45%,transparent)] text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_96%,var(--color-mzk-plasma-ice))]'
+                    'border-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_48%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_26%,black)] text-[var(--color-mzk-skull-bone)]'
+                  : 'bg-[color-mix(in_srgb,black_45%,transparent)] text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_96%,var(--color-mzk-smoke-panel))]'
                 } ${props.voice.supportsStt ? '' : 'cursor-not-allowed opacity-55'} `}
                 disabled={!props.voice.supportsStt}
                 {...props.pushToTalkProps}
@@ -205,288 +246,304 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
               </button>
               <LabPad
                 disabled={!props.voice.supportsStt}
-                className={`${SIM_CTL_H} !min-h-8 flex-1 !rounded-none border-0 !text-[8px]`}
+                className="!flex h-auto min-h-9 flex-1 items-center justify-center !rounded-none border-0 !py-1.5 !text-[8px] pointer-coarse:min-h-11 pointer-coarse:!py-2 sm:!min-h-8 sm:!py-1"
                 onClick={() => props.voice.startMicTap()}
               >
                 Mic
               </LabPad>
               <LabPad
                 disabled={!props.sessionId}
-                className={`${SIM_CTL_H} !min-h-8 flex-1 !rounded-none border-0 !text-[8px]`}
+                className="!flex h-auto min-h-9 flex-1 items-center justify-center !rounded-none border-0 !py-1.5 !text-[8px] pointer-coarse:min-h-11 pointer-coarse:!py-2 sm:!min-h-8 sm:!py-1"
                 onClick={() => void props.onVoiceNormalize()}
               >
                 Voice
               </LabPad>
             </HudSegmentRail>
-          </>
-        : <>
-        <div className="mb-1.5 flex flex-col gap-1 border-b border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_16%,transparent)] pb-1.5 sm:flex-row sm:items-center sm:gap-2">
-          <button
-            type="button"
-            className="shrink-0 rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_24%,transparent)] bg-[color-mix(in_srgb,black_40%,transparent)] px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_12%,black)] pointer-coarse:min-h-10 active:translate-y-px"
-            onClick={() => setDeckExpanded(false)}
-          >
-            Minimize ▴
-          </button>
-          <p
-            className="min-w-0 flex-1 text-center font-[family-name:var(--font-display)] text-[clamp(0.68rem,2.4vw,0.88rem)] font-semibold leading-tight text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_98%,white)] sm:px-1"
-            style={{
-              textShadow:
-                '0 0 1px rgba(0,0,0,1), 0 0 14px color-mix(in srgb, var(--color-mzk-plasma-violet) 28%, transparent)',
-            }}
-          >
-            {props.kaiserLine}
-          </p>
-          {props.subtitleStreaming ?
-            <span className="shrink-0 text-center font-mono text-[clamp(8px,1.8vw,10px)] uppercase tracking-[0.16em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)] sm:text-right">
-              Live stream
-            </span>
-          : <span className="hidden w-0 shrink-0 sm:block sm:w-16" aria-hidden />}
-        </div>
-        <div
-          role="tablist"
-          aria-label="Hull deck sections"
-          className={`${SIM_TAB_STRIP} mt-1.5`}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-              e.preventDefault()
-              focusAdjacentDeckTab(1)
-            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-              e.preventDefault()
-              focusAdjacentDeckTab(-1)
-            } else if (e.key === 'Home') {
-              e.preventDefault()
-              activateDeckTab(DECK_TABS[0]!.id)
-            } else if (e.key === 'End') {
-              e.preventDefault()
-              activateDeckTab(DECK_TABS[DECK_TABS.length - 1]!.id)
-            }
-          }}
-        >
-          {DECK_TABS.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              id={`${deckTabId}-tab-${id}`}
-              aria-selected={deckTab === id}
-              tabIndex={deckTab === id ? 0 : -1}
-              aria-controls={`${deckTabId}-panel-${id}`}
-              className={`${SIM_TAB_BTN} ${deckTab === id ? SIM_TAB_BTN_ACTIVE : ''} pointer-coarse:min-h-11`}
-              onClick={() => setDeckTab(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {deckTab === 'command' ?
-          <div
-            role="tabpanel"
-            id={`${deckTabId}-panel-command`}
-            aria-labelledby={`${deckTabId}-tab-command`}
-            className="mt-1.5 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-1.5"
-          >
-            <form className={`${SIM_ACTION_ROW}`} onSubmit={props.onCommandSubmit}>
-              <textarea
-                id="hull-lab-cmd"
-                rows={2}
-                placeholder="Directive…"
-                value={props.commandInput}
-                onChange={(e) => props.setCommandInput(e.target.value)}
-                className="min-h-[2.75rem] min-w-0 flex-[1_1_min(100%,160px)] resize-y rounded-md border border-white/22 bg-neutral-950/95 px-[clamp(0.3rem,1.2vw,0.5rem)] py-[clamp(0.25rem,1vw,0.38rem)] font-[family-name:var(--font-body)] text-[clamp(10px,2.5vw,13px)] text-[var(--color-mzk-reactor-white)] outline-none placeholder:text-white/45 ring-offset-2 ring-offset-[#070910] focus-visible:border-[color-mix(in_srgb,var(--color-mzk-plasma)_45%,white)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_40%,transparent)] sm:flex-[1_1_220px]"
-              />
-              <CockpitPrimaryActuator
-                type="submit"
-                className={`${SIM_CTL_H} shrink-0 px-[clamp(0.55rem,2.2vw,0.95rem)] py-[clamp(0.3rem,1.2vw,0.45rem)] text-[clamp(8px,2.2vw,11px)] pointer-coarse:min-h-11`}
-              >
-                Execute
-              </CockpitPrimaryActuator>
-            </form>
-
-            <div className={`${SIM_ACTION_ROW} mt-1.5`}>
-              <button
-                type="button"
-                title="Hold to capture speech"
-                className={`${SIM_CTL_H} rounded-md border px-[clamp(0.4rem,1.6vw,0.65rem)] py-[clamp(0.28rem,1.1vw,0.38rem)] font-mono text-[clamp(9px,2.3vw,11px)] font-semibold uppercase tracking-[0.07em] pointer-coarse:min-h-11 sm:min-h-[34px] ${labEase} ${
-                  props.avatarListening ?
-                    'border-[color-mix(in_srgb,var(--color-mzk-gold)_48%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-warning-orange)_22%,black)] text-[var(--color-mzk-reactor-white)]'
-                  : 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_22%,transparent)] bg-black/60 text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_96%,var(--color-mzk-plasma-ice))]'
-                } ${props.voice.supportsStt ? '' : 'cursor-not-allowed opacity-55'} `}
-                disabled={!props.voice.supportsStt}
-                {...props.pushToTalkProps}
-              >
-                PTT
-              </button>
-              <LabPad disabled={!props.voice.supportsStt} className={`${SIM_CTL_H} text-[clamp(9px,2.2vw,10px)] pointer-coarse:min-h-11`} onClick={() => props.voice.startMicTap()}>
-                Mic tap
-              </LabPad>
-              <LabPad disabled={!props.sessionId} className={`${SIM_CTL_H} text-[clamp(9px,2.2vw,10px)] pointer-coarse:min-h-11`} onClick={() => void props.onVoiceNormalize()}>
-                Voice cmd
-              </LabPad>
-            </div>
-
-            <details className="group mt-1.5 rounded-md border border-[color-mix(in_srgb,var(--color-mzk-plasma)_12%,transparent)] bg-black/35 px-1.5 py-1">
-              <summary className="cursor-pointer list-none font-mono text-[8px] uppercase tracking-[0.18em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_78%,transparent)] marker:content-none [&::-webkit-details-marker]:hidden">
-                <span className="text-[color-mix(in_srgb,var(--color-mzk-gold-core)_75%,transparent)] group-open:rotate-90 inline-block transition-transform">
-                  ▸
-                </span>{' '}
-                Activity log
-              </summary>
-              <div className="mt-2 grid gap-2 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-2 font-mono text-[9px] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,transparent)]">
-                {props.voice.liveTranscript ?
-                  <p className="text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]">
-                    <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
-                      Live STT ·{' '}
-                    </span>
-                    {props.voice.liveTranscript}
-                  </p>
-                : null}
-                {props.assistantStream.trim() ?
-                  <p className="text-[color-mix(in_srgb,var(--color-mzk-plasma)_90%,white)]">
-                    <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
-                      Stream ·{' '}
-                    </span>
-                    {props.assistantStream}
-                  </p>
-                : props.transcript ?
-                  <p>{props.transcript}</p>
-                : (
-                  <p className="text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_72%,transparent)]">No live voice or transcript yet.</p>
-                )}
-              </div>
-            </details>
           </div>
-        : null}
-
-        {deckTab === 'combat' ?
-          <div
-            role="tabpanel"
-            id={`${deckTabId}-panel-combat`}
-            aria-labelledby={`${deckTabId}-tab-combat`}
-            className="mt-1.5 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-1.5"
-          >
-            <div className={`${SIM_ACTION_ROW}`}>
-              <label htmlFor="hull-lab-mode" className="sr-only">
-                Personality mode
-              </label>
-              <select
-                id="hull-lab-mode"
-                value={props.personalityMode}
-                onChange={(e) => props.onPersonalityModeChange(e.target.value as PersonalityMode)}
-                className={`max-w-[min(220px,86vw)] ${SIM_CTL_H} cursor-pointer rounded-md border border-white/28 bg-neutral-950 px-2 py-1 font-mono text-[clamp(10px,2.4vw,12px)] uppercase tracking-[0.05em] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_50%,white)] sm:max-w-[min(200px,48vw)] pointer-coarse:min-h-11`}
-              >
-                {PERSONALITY_MODES.map((m) => (
-                  <option key={m} value={m}>
-                    {m.replace(/_/g, ' ')}
-                  </option>
-                ))}
-              </select>
-              <label className={`${SIM_ACTION_ROW} min-h-0 cursor-pointer items-center gap-1.5 rounded-md border border-white/22 bg-black/70 px-2 py-1 font-mono text-[clamp(9px,2.2vw,11px)] uppercase tracking-[0.05em] text-white/90`}>
-                <input
-                  type="checkbox"
-                  checked={props.strictWake}
-                  onChange={(e) => props.onStrictWakeChange(e.target.checked)}
-                  className="h-3 w-3 accent-[var(--color-mzk-gold-core)]"
-                />
-                Wake gate
-              </label>
-              <CockpitPad tone="plasma" disabled={!props.sessionId} onClick={props.onRunDiagnostics} className={`${SIM_CTL_H} py-1.5 text-[clamp(9px,2.2vw,11px)] sm:py-1 pointer-coarse:min-h-11`}>
-                Diagnose
-              </CockpitPad>
-              <CockpitPad
-                tone="plasma"
-                disabled={props.tacticalLoading}
-                onClick={props.onLoadTactical}
-                className={`${SIM_CTL_H} py-1.5 text-[clamp(9px,2.2vw,11px)] sm:py-1 pointer-coarse:min-h-11`}
-              >
-                {props.tacticalLoading ? 'Env…' : 'Tactical'}
-              </CockpitPad>
-            </div>
-
-            <p className="mt-1 font-mono text-[clamp(8px,1.85vw,10px)] uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_76%,white)]">
-              Sequence bus — demo moves
-            </p>
-            <div className="mt-1 grid grid-cols-2 gap-[clamp(0.2rem,0.8vw,0.28rem)] min-[520px]:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {KAISER_MOVES.map((m) => (
-                <LabPad key={m} disabled={!props.sessionId} className="min-h-[32px] max-w-none truncate py-1.5 text-[clamp(9px,2.1vw,10px)] sm:min-h-[30px] sm:max-w-[130px] sm:py-1 pointer-coarse:min-h-11" onClick={() => props.onDemoMove(m)}>
-                  {m}
-                </LabPad>
-              ))}
-            </div>
-
-            {props.tacticalSnippet ?
-              <p className="mt-2 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-2 font-mono text-[9px] leading-snug text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_88%,silver)]">
-                <span className="uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
-                  Tactical envelope ·{' '}
-                </span>
-                {props.tacticalSnippet}
-              </p>
-            : null}
-          </div>
-        : null}
-
-        {deckTab === 'twin' ?
-          <div
-            role="tabpanel"
-            id={`${deckTabId}-panel-twin`}
-            aria-labelledby={`${deckTabId}-tab-twin`}
-            className="mt-1.5 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-1.5"
-          >
-            <p className="text-center font-mono text-[clamp(9px,2.1vw,11px)] leading-snug text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]">
-              Twin uplink · hull telemetry and advisories
-            </p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              <div className="grid w-full grid-cols-2 gap-1.5 min-[420px]:grid-cols-4">
-                <MicroBar label="PH" pct={d?.photon_power_pct ?? 0} title="Photon power (%)" />
-                <MicroBar label="SY" pct={d?.sync_rate_pct ?? 0} title="Sync rate (%)" />
-                <MicroBar label="TH" pct={d?.heat_level_pct ?? 0} title="Thermal load (%)" />
-                <MicroBar label="AR" pct={d?.armor_integrity_pct ?? 0} title="Armor integrity (%)" />
-              </div>
-            </div>
-            <div className="mt-2 grid gap-2 rounded-md border border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] bg-black/30 px-1.5 py-2 font-mono text-[9px] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,transparent)] sm:grid-cols-2">
-              <p>
-                <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
-                  Mode ·{' '}
-                </span>
-                {formatHudEnum(d?.mode)}
-              </p>
-              <p>
-                <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
-                  Posture ·{' '}
-                </span>
-                {formatHudEnum(d?.operational_state)}
-              </p>
-              <p>
-                <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
-                  Move ·{' '}
-                </span>
-                {d?.last_demo_move ? formatHudEnum(d.last_demo_move) : '—'}
-              </p>
-              <p>
-                <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
-                  Stress ·{' '}
-                </span>
-                {(d?.structural_stress_pct ?? 0).toFixed(1)}%
-              </p>
-              {d?.alerts_active?.length ?
-                <ul className="sm:col-span-2">
-                  {d.alerts_active.map((a, i) => (
-                    <li key={`${i}-${a.slice(0, 16)}`} className="border-l border-[color-mix(in_srgb,var(--color-mzk-photon-red)_45%,transparent)] py-0.5 pl-2 text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_90%,silver)]">
-                      {a}
-                    </li>
-                  ))}
-                </ul>
-              : (
-                <p className="text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_72%,transparent)] sm:col-span-2">Advisory stack empty.</p>
-              )}
-            </div>
-          </div>
-        : null}
-        </>
-        }
         </HudDeckGrip>
       </div>
+
+      {props.diagnosticSurfaceActive ?
+        <div className="pointer-events-auto fixed inset-0 z-[125] flex justify-end">
+          <button
+            type="button"
+            aria-label="Close diagnostics"
+            className="h-full min-h-0 flex-1 bg-black/55 backdrop-blur-[2px]"
+            onClick={() => props.onDiagnosticSurfaceChange(false)}
+          />
+          <aside
+            className="flex h-full min-h-0 w-[min(100vw-1rem,440px)] max-w-[100vw] flex-col border-l border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_38%,var(--color-mzk-smoke-panel)_22%)] bg-[color-mix(in_srgb,var(--color-mzk-gunmetal)_97%,black)] shadow-[-12px_0_48px_rgba(0,0,0,0.85)]"
+            aria-label="Diagnostics drawer"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_35%,transparent)] px-2 py-1.5">
+              <span className="font-[family-name:var(--font-display)] text-[clamp(0.72rem,2.2vw,0.9rem)] font-semibold uppercase tracking-[0.12em] text-[var(--color-mzk-skull-bone)]">
+                Diagnostics
+              </span>
+              <button
+                type="button"
+                className="rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_45%,transparent)] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)] hover:bg-white/5"
+                onClick={() => props.onDiagnosticSurfaceChange(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3 pt-2">
+              <div
+                role="tablist"
+                aria-label="Diagnostics sections"
+                className={`${SIM_TAB_STRIP}`}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    focusAdjacentDeckTab(1)
+                  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    focusAdjacentDeckTab(-1)
+                  } else if (e.key === 'Home') {
+                    e.preventDefault()
+                    activateDeckTab(DECK_TABS[0]!.id)
+                  } else if (e.key === 'End') {
+                    e.preventDefault()
+                    activateDeckTab(DECK_TABS[DECK_TABS.length - 1]!.id)
+                  }
+                }}
+              >
+                {DECK_TABS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    id={`${deckTabId}-tab-${id}`}
+                    aria-selected={drawerTab === id}
+                    tabIndex={drawerTab === id ? 0 : -1}
+                    aria-controls={`${deckTabId}-panel-${id}`}
+                    className={`${SIM_TAB_BTN} ${drawerTab === id ? SIM_TAB_BTN_ACTIVE : ''} pointer-coarse:min-h-11`}
+                    onClick={() => setDrawerTab(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {drawerTab === 'command' ?
+                <div
+                  role="tabpanel"
+                  id={`${deckTabId}-panel-command`}
+                  aria-labelledby={`${deckTabId}-tab-command`}
+                  className="mt-2 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-2"
+                >
+                  <form className={`${SIM_ACTION_ROW}`} onSubmit={props.onCommandSubmit}>
+                    <textarea
+                      id="hull-lab-cmd"
+                      rows={3}
+                      placeholder="Directive…"
+                      value={props.commandInput}
+                      onChange={(e) => props.setCommandInput(e.target.value)}
+                      className="min-h-[3.25rem] min-w-0 flex-[1_1_min(100%,160px)] resize-y rounded-md border border-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_35%,transparent)] bg-[color-mix(in_srgb,black_90%,transparent)] px-[clamp(0.3rem,1.2vw,0.5rem)] py-[clamp(0.25rem,1vw,0.38rem)] font-[family-name:var(--font-body)] text-[clamp(10px,2.5vw,13px)] text-[var(--color-mzk-skull-bone)] outline-none placeholder:text-white/45 ring-offset-2 ring-offset-[#070910] focus-visible:border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_55%,white)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-blood-energy)_35%,transparent)] sm:flex-[1_1_220px]"
+                    />
+                    <CockpitPrimaryActuator
+                      type="submit"
+                      className={`${SIM_CTL_H} shrink-0 px-[clamp(0.55rem,2.2vw,0.95rem)] py-[clamp(0.3rem,1.2vw,0.45rem)] text-[clamp(8px,2.2vw,11px)] pointer-coarse:min-h-11`}
+                    >
+                      Execute
+                    </CockpitPrimaryActuator>
+                  </form>
+
+                  <div className={`${SIM_ACTION_ROW} mt-2`}>
+                    <button
+                      type="button"
+                      title="Hold to capture speech"
+                      className={`${SIM_CTL_H} rounded-md border px-[clamp(0.4rem,1.6vw,0.65rem)] py-[clamp(0.28rem,1.1vw,0.38rem)] font-mono text-[clamp(9px,2.3vw,11px)] font-semibold uppercase tracking-[0.07em] pointer-coarse:min-h-11 sm:min-h-[34px] ${labEase} ${
+                        props.avatarListening ?
+                          'border-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_48%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_24%,black)] text-[var(--color-mzk-skull-bone)]'
+                        : 'border-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_28%,transparent)] bg-black/60 text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_96%,var(--color-mzk-plasma-ice))]'
+                      } ${props.voice.supportsStt ? '' : 'cursor-not-allowed opacity-55'} `}
+                      disabled={!props.voice.supportsStt}
+                      {...props.pushToTalkProps}
+                    >
+                      PTT
+                    </button>
+                    <LabPad
+                      disabled={!props.voice.supportsStt}
+                      className={`${SIM_CTL_H} text-[clamp(9px,2.2vw,10px)] pointer-coarse:min-h-11`}
+                      onClick={() => props.voice.startMicTap()}
+                    >
+                      Mic tap
+                    </LabPad>
+                    <LabPad disabled={!props.sessionId} className={`${SIM_CTL_H} text-[clamp(9px,2.2vw,10px)] pointer-coarse:min-h-11`} onClick={() => void props.onVoiceNormalize()}>
+                      Voice cmd
+                    </LabPad>
+                  </div>
+
+                  <details className="group mt-2 rounded-md border border-[color-mix(in_srgb,var(--color-mzk-plasma)_12%,transparent)] bg-black/35 px-1.5 py-1">
+                    <summary className="cursor-pointer list-none font-mono text-[8px] uppercase tracking-[0.18em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_78%,transparent)] marker:content-none [&::-webkit-details-marker]:hidden">
+                      <span className="text-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_75%,transparent)] group-open:rotate-90 inline-block transition-transform">
+                        ▸
+                      </span>{' '}
+                      Activity log
+                    </summary>
+                    <div className="mt-2 grid gap-2 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-2 font-mono text-[9px] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,transparent)]">
+                      {props.voice.liveTranscript ?
+                        <p className="text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]">
+                          <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
+                            Live STT ·{' '}
+                          </span>
+                          {props.voice.liveTranscript}
+                        </p>
+                      : null}
+                      {props.assistantStream.trim() ?
+                        <p className="text-[color-mix(in_srgb,var(--color-mzk-plasma)_90%,white)]">
+                          <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
+                            Stream ·{' '}
+                          </span>
+                          {props.assistantStream}
+                        </p>
+                      : props.transcript ?
+                        <p>{props.transcript}</p>
+                      : (
+                        <p className="text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_72%,transparent)]">No live voice or transcript yet.</p>
+                      )}
+                    </div>
+                  </details>
+                </div>
+              : null}
+
+              {drawerTab === 'combat' ?
+                <div
+                  role="tabpanel"
+                  id={`${deckTabId}-panel-combat`}
+                  aria-labelledby={`${deckTabId}-tab-combat`}
+                  className="mt-2 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-2"
+                >
+                  <div className={`${SIM_ACTION_ROW}`}>
+                    <label htmlFor="hull-lab-mode" className="sr-only">
+                      Personality mode
+                    </label>
+                    <select
+                      id="hull-lab-mode"
+                      value={props.personalityMode}
+                      onChange={(e) => props.onPersonalityModeChange(e.target.value as PersonalityMode)}
+                      className={`max-w-[min(220px,86vw)] ${SIM_CTL_H} cursor-pointer rounded-md border border-white/22 bg-neutral-950 px-2 py-1 font-mono text-[clamp(10px,2.4vw,12px)] uppercase tracking-[0.05em] text-white outline-none ring-offset-2 ring-offset-[#070910] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_50%,white)] sm:max-w-[min(200px,48vw)] pointer-coarse:min-h-11`}
+                    >
+                      {PERSONALITY_MODES.map((m) => (
+                        <option key={m} value={m}>
+                          {m.replace(/_/g, ' ')}
+                        </option>
+                      ))}
+                    </select>
+                    <label className={`${SIM_ACTION_ROW} min-h-0 cursor-pointer items-center gap-1.5 rounded-md border border-white/22 bg-black/70 px-2 py-1 font-mono text-[clamp(9px,2.2vw,11px)] uppercase tracking-[0.05em] text-white/90`}>
+                      <input
+                        type="checkbox"
+                        checked={props.strictWake}
+                        onChange={(e) => props.onStrictWakeChange(e.target.checked)}
+                        className="h-3 w-3 accent-[var(--color-mzk-gold-core)]"
+                      />
+                      Wake gate
+                    </label>
+                    <CockpitPad tone="plasma" disabled={!props.sessionId} onClick={props.onRunDiagnostics} className={`${SIM_CTL_H} py-1.5 text-[clamp(9px,2.2vw,11px)] sm:py-1 pointer-coarse:min-h-11`}>
+                      Diagnose
+                    </CockpitPad>
+                    <CockpitPad
+                      tone="plasma"
+                      disabled={props.tacticalLoading}
+                      onClick={props.onLoadTactical}
+                      className={`${SIM_CTL_H} py-1.5 text-[clamp(9px,2.2vw,11px)] sm:py-1 pointer-coarse:min-h-11`}
+                    >
+                      {props.tacticalLoading ? 'Env…' : 'Tactical'}
+                    </CockpitPad>
+                  </div>
+
+                  <p className="mt-2 font-mono text-[clamp(8px,1.85vw,10px)] uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_76%,white)]">
+                    Sequence bus — demo moves
+                  </p>
+                  <div className="mt-1 grid grid-cols-2 gap-[clamp(0.2rem,0.8vw,0.28rem)] min-[420px]:grid-cols-3">
+                    {KAISER_MOVES.map((m) => (
+                      <LabPad
+                        key={m}
+                        disabled={!props.sessionId}
+                        className="min-h-[32px] max-w-none truncate py-1.5 text-[clamp(9px,2.1vw,10px)] sm:min-h-[30px] sm:max-w-[130px] sm:py-1 pointer-coarse:min-h-11"
+                        onClick={() => props.onDemoMove(m)}
+                      >
+                        {m}
+                      </LabPad>
+                    ))}
+                  </div>
+
+                  {props.tacticalSnippet ?
+                    <p className="mt-2 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-2 font-mono text-[9px] leading-snug text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_88%,silver)]">
+                      <span className="uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
+                        Tactical envelope ·{' '}
+                      </span>
+                      {props.tacticalSnippet}
+                    </p>
+                  : null}
+                </div>
+              : null}
+
+              {drawerTab === 'twin' ?
+                <div
+                  role="tabpanel"
+                  id={`${deckTabId}-panel-twin`}
+                  aria-labelledby={`${deckTabId}-tab-twin`}
+                  className="mt-2 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-2"
+                >
+                  <p className="text-center font-mono text-[clamp(9px,2.1vw,11px)] leading-snug text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]">
+                    Twin uplink · hull telemetry and advisories
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <div className="grid w-full grid-cols-2 gap-1.5 min-[360px]:grid-cols-4">
+                      <MicroBar label="PH" pct={d?.photon_power_pct ?? 0} title="Photon power (%)" />
+                      <MicroBar label="SY" pct={d?.sync_rate_pct ?? 0} title="Sync rate (%)" />
+                      <MicroBar label="TH" pct={d?.heat_level_pct ?? 0} title="Thermal load (%)" />
+                      <MicroBar label="AR" pct={d?.armor_integrity_pct ?? 0} title="Armor integrity (%)" />
+                    </div>
+                  </div>
+                  <div className="mt-2 grid gap-2 rounded-md border border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] bg-black/30 px-1.5 py-2 font-mono text-[9px] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,transparent)] sm:grid-cols-2">
+                    <p>
+                      <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
+                        Mode ·{' '}
+                      </span>
+                      {formatHudEnum(d?.mode)}
+                    </p>
+                    <p>
+                      <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
+                        Posture ·{' '}
+                      </span>
+                      {formatHudEnum(d?.operational_state)}
+                    </p>
+                    <p>
+                      <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
+                        Move ·{' '}
+                      </span>
+                      {d?.last_demo_move ? formatHudEnum(d.last_demo_move) : '—'}
+                    </p>
+                    <p>
+                      <span className="uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,transparent)]">
+                        Stress ·{' '}
+                      </span>
+                      {(d?.structural_stress_pct ?? 0).toFixed(1)}%
+                    </p>
+                    {d?.alerts_active?.length ?
+                      <ul className="sm:col-span-2">
+                        {d.alerts_active.map((a, i) => (
+                          <li
+                            key={`${i}-${a.slice(0, 16)}`}
+                            className="border-l border-[color-mix(in_srgb,var(--color-mzk-photon-red)_45%,transparent)] py-0.5 pl-2 text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_90%,silver)]"
+                          >
+                            {a}
+                          </li>
+                        ))}
+                      </ul>
+                    : (
+                      <p className="text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_72%,transparent)] sm:col-span-2">Advisory stack empty.</p>
+                    )}
+                  </div>
+                </div>
+              : null}
+            </div>
+          </aside>
+        </div>
+      : null}
     </div>
   )
 }

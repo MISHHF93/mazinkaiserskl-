@@ -44,6 +44,13 @@
   --color-mzk-danger-purple: #7d3cff;
   --color-mzk-danger-purple-hot: #9d4edd;
 
+  /* SKL inferno cockpit — gunmetal, blood reactor, bone skull accents */
+  --color-mzk-gunmetal: #0c0d12;
+  --color-mzk-blood-energy: #9a0a1a;
+  --color-mzk-inferno-yellow: #e8b00a;
+  --color-mzk-skull-bone: #e8e4dc;
+  --color-mzk-smoke-panel: #6b7078;
+
   /* Semantic aliases consumed by legacy modules */
   --color-cockpit-bg: var(--color-mzk-black);
   --color-cockpit-panel: color-mix(in srgb, var(--color-mzk-black-plate) 88%, transparent);

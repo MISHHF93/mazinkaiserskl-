@@ -1,11 +1,12 @@
 import type { CSSProperties, FormEvent } from 'react'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import type { AvatarPresentation } from '../../avatar/presentation'
 import type { MoveVisualKind, SklMovePlaybackSnapshot } from '../../avatar/presentation/types'
 import { ImageAvatarViewer } from '../../avatar/view/ImageAvatarViewer'
 import { MoveDemonstrationOverlay } from '../../avatar/view/MoveDemonstrationOverlay'
 import type { MazinkaiserCinematicScaleProfile, MechaHudState, PersonalityMode } from '../../types'
 import type { VoiceConsoleSlice, VoicePushToTalkProps } from './CommandConsole'
+import { cockpitExperienceLabel, deriveCockpitExperienceMode } from './cockpitExperienceMode'
 import { HullInstrumentOverlay } from './HullInstrumentOverlay'
 
 type CinematicCockpitProps = {
@@ -19,6 +20,8 @@ type CinematicCockpitProps = {
   hud: MechaHudState | null
   kaiserLine: string
   subtitleStreaming: boolean
+  /** Browser TTS output active — drives waveform / hull pulse with subtitle stream */
+  ttsSpeaking: boolean
 
   avatarPresentation: AvatarPresentation
 
@@ -59,7 +62,18 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
   const avatarListening = props.avatarPresentation.listening
   const h = props.hud
   const [controlsHelpOpen, setControlsHelpOpen] = useState(false)
+  const [diagnosticSurfaceActive, setDiagnosticSurfaceActive] = useState(false)
   const controlsHelpTitleId = useId()
+
+  const cockpitExperienceMode = useMemo(
+    () =>
+      deriveCockpitExperienceMode({
+        presentation: props.avatarPresentation,
+        movePlayback: props.movePlayback,
+        diagnosticSurfaceActive,
+      }),
+    [props.avatarPresentation, props.movePlayback, diagnosticSurfaceActive],
+  )
 
   useEffect(() => {
     if (!controlsHelpOpen) return
@@ -70,12 +84,22 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [controlsHelpOpen])
 
+  const infernoPulse =
+    cockpitExperienceMode === 'MOVE_DEMO' || cockpitExperienceMode === 'FINAL_COUNT'
+      ? 1
+      : cockpitExperienceMode === 'COMBAT_READY'
+        ? 0.55
+        : cockpitExperienceMode === 'DIAGNOSTIC'
+          ? 0.35
+          : 0.22
+
   const cockpitVars = {
     '--mzk-photon-01': clamp01(h?.photon_power_pct ?? 74),
     '--mzk-heat-01': clamp01(h?.heat_level_pct ?? 12),
     '--mzk-sync-01': clamp01(h?.sync_rate_pct ?? 94),
     '--mzk-overdrive-01': clamp01(h?.overdrive_risk_pct ?? 0),
     '--mzk-nova-01': clamp01(h?.nova_readiness_pct ?? 0),
+    '--mzk-inferno-rim': infernoPulse.toFixed(3),
     '--mzk-move-charge':
       props.avatarPresentation.semantic === 'MOVE_CHARGING' ||
       props.avatarPresentation.semantic === 'NOVA_PREP'
@@ -87,6 +111,7 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
 
   return (
     <div
+      data-cockpit-experience={cockpitExperienceMode}
       className="relative flex h-full min-h-0 flex-col font-display-scope bg-[var(--color-mzk-black)] [--scan:5px]"
       style={cockpitVars}
     >
@@ -122,10 +147,10 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
 
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0 animate-mzk-reactor-field opacity-[0.3]"
+        className="pointer-events-none fixed inset-0 z-0 animate-mzk-reactor-field opacity-[calc(0.22+var(--mzk-inferno-rim,0.22)*0.35)]"
         style={{
           backgroundImage:
-            'radial-gradient(ellipse 90% 62% at 50% 118%, color-mix(in srgb, var(--color-mzk-photon-red) calc(18% + var(--mzk-photon-01) * 38%), transparent), transparent 58%)',
+            'radial-gradient(ellipse 90% 62% at 50% 118%, color-mix(in srgb, var(--color-mzk-photon-red) calc(18% + var(--mzk-photon-01) * 38% + var(--mzk-inferno-rim,0) * 24%), transparent), transparent 58%)',
           mixBlendMode: 'screen',
         }}
       />
@@ -148,28 +173,31 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
         className="animate-mzk-tactical-scan pointer-events-none fixed left-0 top-0 z-0 h-[12vh] w-full bg-gradient-to-b from-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_12%,transparent)] to-transparent opacity-[0.34]"
       />
 
-      <header className="relative z-[1] border-b border-[color-mix(in_srgb,var(--color-mzk-silver-dim)_38%,var(--color-mzk-plasma)_18%)] bg-[color-mix(in_srgb,var(--color-mzk-black-plate)_94%,black)] px-[clamp(0.5rem,2.5vw,1.25rem)] py-[clamp(0.4rem,1.2vw,0.65rem)] shadow-[inset_0_-1px_0_color-mix(in_srgb,var(--color-mzk-plasma)_12%,transparent)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[min(2560px,calc(100%-0.5rem))] flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <div className="min-w-0 flex-1 basis-[min(100%,280px)]">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 sm:gap-3">
-              <p className="font-mono text-[clamp(7px,2.2vw,10px)] uppercase tracking-[0.28em] text-[color-mix(in_srgb,var(--color-mzk-silver-bright)_92%,var(--color-mzk-plasma))] sm:tracking-[0.42em] md:tracking-[0.5em]">
-                MAZINKAISER · VIEWPORT IMMERSION
+      <header className="relative z-[1] border-b border-[color-mix(in_srgb,var(--color-mzk-skull-bone)_18%,var(--color-mzk-plasma)_14%)] bg-[color-mix(in_srgb,var(--color-mzk-gunmetal)_96%,black)] px-[clamp(0.35rem,1.4vw,0.75rem)] py-[clamp(0.15rem,0.55vw,0.32rem)] shadow-[inset_0_-1px_0_color-mix(in_srgb,var(--color-mzk-inferno-yellow)_18%,transparent)] backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[min(2560px,calc(100%-0.35rem))] flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          <div className="min-w-0 flex-1 basis-[min(100%,320px)]">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-2.5">
+              <p className="font-mono text-[clamp(6px,1.8vw,9px)] uppercase tracking-[0.22em] text-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_88%,var(--color-mzk-blood-energy)_12%)]">
+                MAZINKAISER SKL
               </p>
-              <span className="hidden h-3 w-px bg-[color-mix(in_srgb,var(--color-mzk-silver)_40%,transparent)] md:inline" />
-              <span className="hidden font-mono text-[clamp(8px,2vw,9px)] tracking-[0.18em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_94%,var(--color-mzk-photon-red))] md:inline lg:tracking-[0.22em]">
-                SUPER ROBOT BRIDGE · LINK PRIME
+              <span
+                className={`rounded-[2px] border px-1.5 py-0.5 font-mono text-[clamp(7px,1.9vw,9px)] uppercase tracking-[0.14em] ${
+                  cockpitExperienceMode === 'MOVE_DEMO' || cockpitExperienceMode === 'FINAL_COUNT'
+                    ? 'border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_18%,black)] text-[var(--color-mzk-inferno-yellow)]'
+                  : cockpitExperienceMode === 'COMBAT_READY'
+                    ? 'border-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_45%,transparent)] bg-black/70 text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_92%,white)]'
+                  : cockpitExperienceMode === 'DIAGNOSTIC'
+                    ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_40%,transparent)] bg-black/75 text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]'
+                  : 'border-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_42%,transparent)] bg-black/65 text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_92%,transparent)]'
+                }`}
+                title="Cockpit experience mode"
+              >
+                {cockpitExperienceLabel(cockpitExperienceMode)}
               </span>
             </div>
-            <h1 className="font-[family-name:var(--font-display)] mt-0.5 max-w-[min(100%,42rem)] truncate text-[clamp(1.05rem,3.5vw,2.25rem)] font-extrabold tracking-tight text-[var(--color-mzk-reactor-white)] [text-shadow:0_0_20px_color-mix(in_srgb,var(--color-mzk-plasma-ice)_38%,transparent),0_0_4px_black]">
-              Kaiser Core Intelligence
+            <h1 className="font-[family-name:var(--font-display)] mt-0.5 max-w-[min(100%,36rem)] truncate text-[clamp(0.78rem,2.4vw,1.35rem)] font-extrabold tracking-tight text-[var(--color-mzk-skull-bone)] [text-shadow:0_0_14px_color-mix(in_srgb,var(--color-mzk-blood-energy)_25%,transparent),0_0_3px_black]">
+              Kaiser Core
             </h1>
-            <p className="mt-1 hidden max-w-[min(56rem,92vw)] font-mono text-[clamp(7px,1.8vw,9px)] uppercase leading-snug tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_88%,var(--color-mzk-gold)_12%)] sm:block sm:tracking-[0.16em] md:tracking-[0.18em]">
-              Hull-native twin · {props.cinematicScaleProfile.height_meters} M hull ·{' '}
-              {props.cinematicScaleProfile.weight_metric_tons} t mass · Scrander{' '}
-              {props.cinematicScaleProfile.scrander_wingspan_meters} M · Blade{' '}
-              {props.cinematicScaleProfile.kaiser_blade_length_meters} M · Cockpit{' '}
-              {props.cinematicScaleProfile.cockpit_length_meters} M
-            </p>
           </div>
 
           <div className="flex max-w-full flex-shrink-0 flex-wrap items-center justify-end gap-[clamp(0.35rem,1.5vw,0.6rem)] text-[clamp(9px,2.4vw,11px)]">
@@ -234,16 +262,16 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
             </h2>
             <ul className="mt-3 list-inside list-disc space-y-2 leading-relaxed text-white/88">
               <li>
-                <strong className="text-[var(--color-mzk-reactor-white)]">Kaiser command</strong> lives bottom-left:
-                directive, voice, and combat moves when you expand the deck.
+                <strong className="text-[var(--color-mzk-reactor-white)]">Kaiser command</strong> — hull strip
+                bottom-left; open <strong>Diag</strong> (top-right) or <strong>Bus</strong> for full sequence deck.
               </li>
               <li>
-                <strong className="text-[var(--color-mzk-reactor-white)]">3D hull tools</strong> (fit, settings, debug)
-                anchor bottom-right on the SKL viewport.
+                <strong className="text-[var(--color-mzk-reactor-white)]">3D hull</strong> — Cinematic / Diagnostic /
+                Pilot / Fullscreen on the viewport dock; Fit and gear bottom-right.
               </li>
               <li>
-                <strong className="text-[var(--color-mzk-reactor-white)]">Twin & hull meters</strong> stay top-right
-                — open “Meters” to show the power bars beside the chips.
+                <strong className="text-[var(--color-mzk-reactor-white)]">Gauges</strong> — top-right chip opens hull
+                instrument bars without leaving the viewport.
               </li>
             </ul>
             <button
@@ -259,15 +287,20 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
 
       <main
         aria-label="Hull-based twin workspace"
-        className="relative z-[1] mx-auto flex min-h-0 w-full max-w-[min(2560px,100%)] flex-1 flex-col px-[clamp(3px,1.2vw,16px)] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-[clamp(2px,0.8vw,10px)] sm:pb-3 sm:pt-1 md:px-[clamp(6px,1.5vw,20px)]"
+        className="relative z-[1] mx-auto flex min-h-0 w-full max-w-[min(2560px,100%)] flex-1 flex-col px-0 pb-[max(0.1rem,env(safe-area-inset-bottom,0px))] pt-0 sm:pb-1"
       >
         <ImageAvatarViewer
           hullSurface
           presentation={props.avatarPresentation}
           movePlayback={props.movePlayback}
+          cockpitExperienceMode={cockpitExperienceMode}
           hudOverlay={
             <HullInstrumentOverlay
+              cockpitExperienceMode={cockpitExperienceMode}
+              diagnosticSurfaceActive={diagnosticSurfaceActive}
+              onDiagnosticSurfaceChange={setDiagnosticSurfaceActive}
               twinStateLabel={props.avatarPresentation.stateLabel}
+              ttsSpeaking={props.ttsSpeaking}
               hud={props.hud}
               kaiserLine={props.kaiserLine}
               subtitleStreaming={props.subtitleStreaming}

@@ -74,7 +74,9 @@ export function SklMoveAnimationPlayback(props: {
   })
   const zeroClipHintLogged = useRef(false)
   const playbackRef = useRef(playback)
-  playbackRef.current = playback
+  useLayoutEffect(() => {
+    playbackRef.current = playback
+  }, [playback])
 
   useLayoutEffect(() => {
     clipsRef.current = new Map(animations.map((c) => [c.name, c]))

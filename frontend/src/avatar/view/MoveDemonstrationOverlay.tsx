@@ -1,6 +1,8 @@
 import type { MoveVisualKind } from '../presentation/types'
 
-/** Full-frame move duvet — static treatment (no looping motion / cinematic pulses). */
+/**
+ * Move phase FX — letterbox + edge vignette so the SKL hull stays visible in the center (~65%+ clear).
+ */
 export function MoveDemonstrationOverlay(props: {
   active: boolean
   moveTitle: string
@@ -15,65 +17,79 @@ export function MoveDemonstrationOverlay(props: {
   const isFireBlaster = slug.includes('fire-blaster') || props.moveTitle.toLowerCase().includes('fire blaster')
 
   const hueOpacity =
-    props.visualHint === 'nova' ? 0.34 : props.visualHint === 'beam' || props.visualHint === 'thermal' ? 0.28 : 0.22
+    props.visualHint === 'nova' ? 0.26 : props.visualHint === 'beam' || props.visualHint === 'thermal' ? 0.2 : 0.16
 
   return (
-    <div
-      className="pointer-events-none fixed inset-0 z-[45] overflow-hidden bg-[color-mix(in_srgb,var(--color-mzk-black)_86%,black)] backdrop-blur-[1.5px]"
-      aria-live="polite"
-    >
+    <div className="pointer-events-none fixed inset-0 z-[45] overflow-hidden" aria-live="polite">
+      {/* Top/bottom letterbox — does not cover hull center */}
+      <div className="absolute inset-x-0 top-0 z-[3] h-[12%] max-h-[132px] bg-gradient-to-b from-[color-mix(in_srgb,black_94%,var(--color-mzk-blood-energy)_6%)] via-black/45 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 z-[3] h-[12%] max-h-[132px] bg-gradient-to-t from-[color-mix(in_srgb,black_92%,var(--color-mzk-blood-energy)_8%)] via-black/45 to-transparent" />
+
+      {/* Edge-only wash — radial mask keeps center transparent for 3D viewport */}
       <div
-        className={`absolute inset-0 mix-blend-screen ${hueClass(props.visualHint, isTurboSmasher, isFireBlaster)}`}
-        style={{ opacity: hueOpacity }}
+        className={`absolute inset-0 z-[1] mix-blend-screen ${hueClass(props.visualHint, isTurboSmasher, isFireBlaster)}`}
+        style={{
+          opacity: hueOpacity,
+          maskImage: 'radial-gradient(ellipse 72% 78% at 50% 50%, transparent 38%, black 96%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 72% 78% at 50% 50%, transparent 38%, black 96%)',
+        }}
       />
 
       {props.visualHint === 'nova' ? (
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_65%_at_50%_40%,color-mix(in_srgb,var(--color-mzk-danger-purple-hot)_52%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-photon-red-hot)_35%,transparent)_45%,transparent_78%)] mix-blend-plus-lighter opacity-[0.48]" />
+        <div
+          className="absolute inset-0 z-[1] bg-[radial-gradient(ellipse_80%_65%_at_50%_40%,color-mix(in_srgb,var(--color-mzk-danger-purple-hot)_42%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-photon-red-hot)_28%,transparent)_45%,transparent_78%)] mix-blend-plus-lighter opacity-[0.38]"
+          style={{
+            maskImage: 'radial-gradient(ellipse 76% 82% at 50% 50%, transparent 36%, black 95%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 76% 82% at 50% 50%, transparent 36%, black 95%)',
+          }}
+        />
       ) : null}
 
       {(isTurboSmasher || props.visualHint === 'melee') && !isFireBlaster ? (
         <div
-          className="absolute inset-0 opacity-[0.28] mix-blend-plus-lighter"
+          className="absolute inset-0 z-[1] opacity-[0.22] mix-blend-plus-lighter"
           style={{
             background:
-              'repeating-linear-gradient(105deg, transparent, transparent 42px, color-mix(in srgb, var(--color-mzk-photon-red-hot) 42%, transparent) 44px, transparent 48px)',
+              'repeating-linear-gradient(105deg, transparent, transparent 42px, color-mix(in srgb, var(--color-mzk-photon-red-hot) 38%, transparent) 44px, transparent 48px)',
+            maskImage: 'radial-gradient(ellipse 74% 80% at 50% 50%, transparent 35%, black 94%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 74% 80% at 50% 50%, transparent 35%, black 94%)',
           }}
         />
       ) : null}
 
       <div
         aria-hidden
-        className="absolute inset-[-18%]"
+        className="absolute inset-[-18%] z-[1]"
         style={{
           background: conicForHint(props.visualHint, isFireBlaster),
-          opacity: 0.45,
+          opacity: 0.32,
+          maskImage: 'radial-gradient(ellipse 78% 84% at 50% 50%, transparent 40%, black 96%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 78% 84% at 50% 50%, transparent 40%, black 96%)',
         }}
       />
-
-      <div className="absolute inset-x-0 top-0 z-[2] h-[10%] max-h-28 bg-[color-mix(in_srgb,var(--color-mzk-black)_94%,transparent)]" />
-      <div className="absolute inset-x-0 bottom-0 z-[2] h-[10%] max-h-28 bg-[color-mix(in_srgb,var(--color-mzk-black)_94%,transparent)]" />
-
-      <div className="absolute left-12 top-[11%] z-[3]">
-        <span className="font-mono text-[10px] uppercase tracking-[0.55em] text-[color-mix(in_srgb,var(--color-mzk-silver-bright)_88%,var(--color-mzk-plasma))]">
-          KAISER MOVE GRAPH
-        </span>
-        <p className="font-[family-name:var(--font-display)] mt-2 text-xl font-bold uppercase tracking-[0.2em] text-[var(--color-mzk-reactor-white)] drop-shadow-[0_0_18px_color-mix(in_srgb,var(--color-mzk-plasma-ice)_55%,transparent)] md:text-2xl">
-          {props.moveTitle}
-        </p>
-        <p className="font-mono mt-1 text-[11px] uppercase tracking-[0.16em] text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_92%,var(--color-mzk-photon-red))]">
-          {props.visualHint === 'nova'
-            ? 'PHASE · CATASTROPHIC PHOTON BLEED — EMERGENCY LENS'
-            : 'PHASE · BATCH EXECUTION · CINEMATIC WAR ROOM'}
-        </p>
-      </div>
 
       <div
         aria-hidden
         className="absolute inset-0 z-[4]"
         style={{
           boxShadow: vignette(props.visualHint),
+          pointerEvents: 'none',
         }}
       />
+
+      <div className="absolute left-3 top-[10%] z-[5] max-w-[min(88vw,28rem)] sm:left-10 sm:top-[12%]">
+        <span className="font-mono text-[9px] uppercase tracking-[0.42em] text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_88%,var(--color-mzk-blood-energy))] sm:text-[10px] sm:tracking-[0.5em]">
+          KAISER SKL · MOVE GRAPH
+        </span>
+        <p className="font-[family-name:var(--font-display)] mt-1.5 text-lg font-bold uppercase tracking-[0.14em] text-[var(--color-mzk-skull-bone)] drop-shadow-[0_0_16px_color-mix(in_srgb,var(--color-mzk-blood-energy)_45%,transparent)] sm:mt-2 sm:text-xl md:text-2xl">
+          {props.moveTitle}
+        </p>
+        <p className="font-mono mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_92%,var(--color-mzk-inferno-yellow))] sm:text-[11px] sm:tracking-[0.16em]">
+          {props.visualHint === 'nova'
+            ? 'PHASE · PHOTON BLEED — NOVA ENVELOPE'
+            : 'PHASE · BATCH EXECUTION · HULL FORWARD'}
+        </p>
+      </div>
 
       {props.visualHint === 'blade' || props.moveTitle.toLowerCase().includes('blade') ? (
         <div
@@ -81,8 +97,10 @@ export function MoveDemonstrationOverlay(props: {
           className="pointer-events-none absolute inset-0 z-[3] mix-blend-screen"
           style={{
             background:
-              'linear-gradient(112deg, transparent 40%, color-mix(in srgb, var(--color-mzk-gold) 28%, transparent) 50%, transparent 60%)',
-            opacity: 0.55,
+              'linear-gradient(112deg, transparent 40%, color-mix(in srgb, var(--color-mzk-gold) 26%, transparent) 50%, transparent 60%)',
+            opacity: 0.42,
+            maskImage: 'radial-gradient(ellipse 80% 85% at 50% 50%, transparent 42%, black 96%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 80% 85% at 50% 50%, transparent 42%, black 96%)',
           }}
         />
       ) : null}
@@ -92,10 +110,11 @@ export function MoveDemonstrationOverlay(props: {
           aria-hidden
           className="pointer-events-none absolute inset-0 z-[3]"
           style={{
-            maskImage: 'radial-gradient(ellipse 70% 60% at 50% 30%, black 35%, transparent 78%)',
+            maskImage: 'radial-gradient(ellipse 78% 84% at 50% 50%, transparent 40%, black 96%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 78% 84% at 50% 50%, transparent 40%, black 96%)',
             backgroundImage:
-              'linear-gradient(180deg, color-mix(in srgb,var(--color-mzk-warning-flare)_15%,transparent), transparent)',
-            opacity: 0.42,
+              'linear-gradient(180deg, color-mix(in srgb,var(--color-mzk-warning-flare)_12%,transparent), transparent)',
+            opacity: 0.36,
           }}
         />
       ) : null}
@@ -118,29 +137,29 @@ function conicForHint(v: MoveVisualKind, fire: boolean): string {
 
 function vignette(v: MoveVisualKind): string {
   if (v === 'nova') {
-    return 'inset 0 0 200px color-mix(in srgb,var(--color-mzk-danger-purple)_52%,transparent), inset 0 0 96px color-mix(in srgb,var(--color-mzk-photon-red-hot)_48%,transparent), inset 0 0 64px color-mix(in srgb,var(--color-mzk-plasma-ice)_28%,transparent)'
+    return 'inset 0 0 200px color-mix(in srgb,var(--color-mzk-danger-purple)_42%,transparent), inset 0 0 96px color-mix(in srgb,var(--color-mzk-photon-red-hot)_42%,transparent), inset 0 0 64px color-mix(in srgb,var(--color-mzk-plasma-ice)_22%,transparent)'
   }
-  return 'inset 0 0 140px color-mix(in srgb,var(--color-mzk-plasma)_22%,transparent), inset 0 0 92px color-mix(in srgb,var(--color-mzk-photon-red-deep)_38%,transparent)'
+  return 'inset 0 0 120px color-mix(in srgb,var(--color-mzk-plasma)_18%,transparent), inset 0 0 88px color-mix(in srgb,var(--color-mzk-blood-energy)_35%,transparent)'
 }
 
 function hueClass(v: MoveVisualKind, turboMelee: boolean, fire: boolean): string {
   if (fire || v === 'thermal') {
-    return 'bg-[radial-gradient(ellipse_82%_58%_at_50%_28%,color-mix(in_srgb,var(--color-mzk-photon-red-hot)_55%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-warning-orange)_38%,transparent)_42%,transparent_72%)]'
+    return 'bg-[radial-gradient(ellipse_82%_58%_at_50%_28%,color-mix(in_srgb,var(--color-mzk-photon-red-hot)_48%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-warning-orange)_32%,transparent)_42%,transparent_72%)]'
   }
   if (turboMelee || v === 'melee') {
-    return 'bg-[radial-gradient(ellipse_78%_55%_at_50%_22%,color-mix(in_srgb,var(--color-mzk-photon-red-deep)_62%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-danger-purple)_35%,transparent)_55%,transparent_76%)]'
+    return 'bg-[radial-gradient(ellipse_78%_55%_at_50%_22%,color-mix(in_srgb,var(--color-mzk-photon-red-deep)_55%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-danger-purple)_30%,transparent)_55%,transparent_76%)]'
   }
   switch (v) {
     case 'beam':
     case 'nova':
-      return 'bg-[radial-gradient(ellipse_92%_58%_at_50%_24%,color-mix(in_srgb,var(--color-mzk-plasma-ice)_55%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-plasma-violet)_52%,transparent)_48%,transparent_74%)]'
+      return 'bg-[radial-gradient(ellipse_92%_58%_at_50%_24%,color-mix(in_srgb,var(--color-mzk-plasma-ice)_48%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-plasma-violet)_48%,transparent)_48%,transparent_74%)]'
     case 'blade':
-      return 'bg-[radial-gradient(ellipse_72%_52%_at_50%_20%,color-mix(in_srgb,var(--color-mzk-gold-core)_52%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-silver-bright)_38%,transparent)_55%,transparent_70%)]'
+      return 'bg-[radial-gradient(ellipse_72%_52%_at_50%_20%,color-mix(in_srgb,var(--color-mzk-gold-core)_48%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-silver-bright)_35%,transparent)_55%,transparent_70%)]'
     case 'field':
-      return 'bg-[radial-gradient(ellipse_86%_60%_at_50%_18%,color-mix(in_srgb,var(--color-mzk-plasma)_42%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-plasma-ice)_22%,transparent)_70%,transparent_78%)]'
+      return 'bg-[radial-gradient(ellipse_86%_60%_at_50%_18%,color-mix(in_srgb,var(--color-mzk-plasma)_38%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-plasma-ice)_20%,transparent)_70%,transparent_78%)]'
     case 'thruster':
-      return 'bg-[radial-gradient(ellipse_82%_55%_at_50%_16%,color-mix(in_srgb,var(--color-mzk-plasma-ice)_50%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-plasma)_35%,transparent)_60%,transparent_74%)]'
+      return 'bg-[radial-gradient(ellipse_82%_55%_at_50%_16%,color-mix(in_srgb,var(--color-mzk-plasma-ice)_45%,transparent)_0%,color-mix(in_srgb,var(--color-mzk-plasma)_32%,transparent)_60%,transparent_74%)]'
     default:
-      return 'bg-[radial-gradient(ellipse_82%_58%_at_50%_30%,color-mix(in_srgb,var(--color-mzk-plasma-ice)_38%,transparent)_0%,transparent_72%)]'
+      return 'bg-[radial-gradient(ellipse_82%_58%_at_50%_30%,color-mix(in_srgb,var(--color-mzk-plasma-ice)_35%,transparent)_0%,transparent_72%)]'
   }
 }

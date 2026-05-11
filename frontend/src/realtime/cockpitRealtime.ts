@@ -1,8 +1,9 @@
 /** WebSocket protocol helpers for `/ws/cockpit` (protocol v1). */
 
+import { parseCockpitRealtimePayload, telemetryFromRealtimeEvent, COCKPIT_WS_PROTOCOL_VERSION } from '@mazinkaiser/shared-types'
 import type { MechaHudState } from '../types'
 
-export const COCKPIT_WS_PROTOCOL_VERSION = 1 as const
+export { COCKPIT_WS_PROTOCOL_VERSION }
 
 /** Exponential backoff with jitter for resilient reconnects (non-blocking timer is caller's job). */
 export function websocketReconnectDelayMs(attemptIndex: number, maxMs = 30_000): number {
@@ -11,17 +12,10 @@ export function websocketReconnectDelayMs(attemptIndex: number, maxMs = 30_000):
   return base + jitter
 }
 
-/** Map inbound JSON to HUD state (`telemetry` replaces legacy `state`). */
-export function extractHudPayload(msg: { type?: unknown; telemetry?: unknown; state?: unknown }): MechaHudState | null {
-  if (msg.type === 'telemetry' && msg.telemetry && typeof msg.telemetry === 'object') {
-    return msg.telemetry as MechaHudState
-  }
-  if (msg.type === 'state' && msg.state && typeof msg.state === 'object') {
-    return msg.state as MechaHudState
-  }
-  if (msg.type === 'session' && msg.state && typeof msg.state === 'object') {
-    return msg.state as MechaHudState
-  }
+/** Map inbound JSON to HUD state (`telemetry` replaces legacy `state`) with Zod normalization. */
+export function extractHudPayload(msg: unknown): MechaHudState | null {
+  const parsed = parseCockpitRealtimePayload(msg)
+  if (parsed.ok) return telemetryFromRealtimeEvent(parsed.event)
   return null
 }
 

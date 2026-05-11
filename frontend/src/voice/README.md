@@ -1,1 +1,1 @@
-Wake phrase, push-to-talk, speech recognition lifecycle — extract from `App.tsx` during **Prompt 4**.
+Project hub: **[`../../../README.md`](../../../README.md)**.

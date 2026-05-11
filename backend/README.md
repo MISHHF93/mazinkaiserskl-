@@ -1,3 +1,3 @@
-# Mazinkaiser AI — backend
+# Backend
 
-FastAPI service (`mazinkaiser.main:app`). Install with `pip install .` from this directory; run with `uvicorn mazinkaiser.main:app --reload` for local development.
+Canonical documentation: **[`../README.md`](../README.md)** (repository root). Package layout: **[`STRUCTURE.md`](STRUCTURE.md)**.

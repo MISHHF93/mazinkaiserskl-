@@ -3,6 +3,13 @@ import type { MazinkaiserCinematicScaleProfile, MechaHudState } from '../types'
 import { MAZINKAISER_CINEMATIC_SCALE_FALLBACK } from '../types'
 import { cockpitUplinkDisabled, cockpitWsUrl } from '../config'
 import {
+  parseCockpitRealtimePayload,
+  parseMoveExecutionBatch,
+  type CockpitRealtimeEvent,
+  type SKLMoveExecutionBatch,
+} from '@mazinkaiser/shared-types'
+import { useCockpitTraceStore } from '../stores/cockpitTraceStore'
+import {
   buildHelloFrame,
   extractHudPayload,
   websocketReconnectDelayMs,
@@ -11,12 +18,8 @@ import {
 /** `preview` = uplink intentionally off (`VITE_COCKPIT_DISABLE`), local hull/assets only. */
 type WsStatus = 'connecting' | 'open' | 'closed' | 'error' | 'preview'
 
-export type MoveBatchWire = {
-  outcome?: string
-  move_id?: string
-  animation_plan?: Record<string, unknown>[]
-  voice_line?: string
-}
+/** Wire shape for `move_batch` — canonical `@mazinkaiser/shared-types` name is {@link SKLMoveExecutionBatch}. */
+export type MoveBatchWire = SKLMoveExecutionBatch
 
 type WsInbound = {
   type: string
@@ -98,42 +101,69 @@ export function useCockpitWs(handlers?: CockpitWsHandlers) {
 
       ws.onmessage = (ev) => {
         try {
-          const msg = JSON.parse(ev.data as string) as WsInbound
-          if (msg.type === 'welcome' && msg.session_id) {
+          const raw: unknown = JSON.parse(ev.data as string)
+          const inbound = parseCockpitRealtimePayload(raw)
+          const msg: CockpitRealtimeEvent | WsInbound = inbound.ok
+            ? inbound.event
+            : (raw as WsInbound)
+
+          if (!inbound.ok && import.meta.env.DEV) {
+            console.warn('[cockpit-ws] frame partial schema match', inbound.issues)
+          }
+
+          if (msg.type === 'welcome' && 'session_id' in msg && typeof msg.session_id === 'string') {
             sessionIdRef.current = msg.session_id
             setSessionId(msg.session_id)
             setAssistDone(false)
-            const p = msg.cinematic_scale_profile
-            if (p && typeof p.height_meters === 'number') {
-              setCinematicScaleProfile(p)
+            const p =
+              'cinematic_scale_profile' in msg && msg.cinematic_scale_profile != null
+                ? msg.cinematic_scale_profile
+                : undefined
+            if (p && typeof p === 'object' && 'height_meters' in p && typeof p.height_meters === 'number') {
+              setCinematicScaleProfile(p as MazinkaiserCinematicScaleProfile)
             }
           }
-          const fromTelem = extractHudPayload(msg)
+
+          const fromTelem = extractHudPayload(msg as unknown)
           if (fromTelem) {
             setHud(fromTelem)
             setAssistDone(false)
           }
-          if (msg.type === 'session' && msg.session_id) {
+
+          if (msg.type === 'session' && 'session_id' in msg && typeof msg.session_id === 'string') {
             sessionIdRef.current = msg.session_id
             setSessionId(msg.session_id)
-            if (msg.state) setHud(msg.state)
+            if ('state' in msg && msg.state) {
+              const h = extractHudPayload({ type: 'session', session_id: msg.session_id, state: msg.state } as unknown)
+              if (h) setHud(h)
+            }
             setAssistDone(false)
           }
-          if (msg.type === 'move_event' && msg.move_batch && typeof msg.move_batch === 'object') {
-            if (msg.telemetry && typeof msg.telemetry === 'object') {
-              setHud(msg.telemetry as MechaHudState)
-            }
-            handlersRef.current?.onInboundMoveBatch?.(msg.move_batch)
+
+          if (msg.type === 'move_event' && 'move_batch' in msg && msg.move_batch && typeof msg.move_batch === 'object') {
+            const mb = parseMoveExecutionBatch(msg.move_batch) ?? (msg.move_batch as SKLMoveExecutionBatch)
+            const h = extractHudPayload(msg as unknown)
+            if (h) setHud(h)
+            handlersRef.current?.onInboundMoveBatch?.(mb)
           }
-          if (msg.type === 'assistant' && typeof msg.text === 'string') {
-            setLastReply(msg.text)
+
+          if (msg.type === 'assistant' && typeof (msg as WsInbound).text === 'string') {
+            setLastReply((msg as WsInbound).text as string)
             setAssistantStream('')
             setAssistDone(false)
+            const tid = typeof (msg as WsInbound).trace_id === 'string' ? (msg as WsInbound).trace_id : undefined
+            useCockpitTraceStore.getState().setFromAssistantFrame(tid, 'assistant')
           }
-          if (msg.type === 'assistant_token' && typeof msg.token === 'string') {
-            setAssistantStream((prev) => prev + msg.token)
+          if (msg.type === 'assistant_token' && typeof (msg as WsInbound).token === 'string') {
+            setAssistantStream((prev) => prev + ((msg as WsInbound).token as string))
+            const tid = typeof (msg as WsInbound).trace_id === 'string' ? (msg as WsInbound).trace_id : undefined
+            useCockpitTraceStore.getState().setFromAssistantFrame(tid, 'assistant_token')
           }
-          if (msg.type === 'assistant_done') setAssistDone(true)
+          if (msg.type === 'assistant_done') {
+            setAssistDone(true)
+            const tid = typeof (msg as WsInbound).trace_id === 'string' ? (msg as WsInbound).trace_id : undefined
+            useCockpitTraceStore.getState().setFromAssistantFrame(tid, 'assistant_done')
+          }
         } catch (err) {
           if (import.meta.env.DEV) {
             console.warn('[cockpit-ws] dropped malformed or unhandled frame', err)

@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   normalizeAnimationPlan,
   resolveAvatarPresentation,
@@ -59,7 +59,9 @@ export default function App() {
 
   /** WS inbound batches consult fresh phase — avoids stale `{charging | executing}` closure skips/doubles. */
   const moveLayerRef = useRef(moveLayer)
-  moveLayerRef.current = moveLayer
+  useLayoutEffect(() => {
+    moveLayerRef.current = moveLayer
+  }, [moveLayer])
 
   const [hudRest, setHudRest] = useState<MechaHudState | null>(null)
   const [mode, setMode] = useState<PersonalityMode>('KAISER_CORE_MODE')
@@ -457,6 +459,7 @@ export default function App() {
       hud={hud}
       kaiserLine={kaiserLine}
       subtitleStreaming={Boolean(assistantStream.trim())}
+      ttsSpeaking={ttsSpeaking}
       avatarPresentation={avatarPresentation}
       movePlayback={sklMovePlayback}
       moveDemonstrationOverlay={{

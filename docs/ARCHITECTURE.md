@@ -117,6 +117,59 @@ Incremental build order and mandated safety-for-refactors footer live in **`docs
 
 Key modules: `mazinkaiser/realtime/hub.py`, `mazinkaiser/realtime/notify.py`, `mazinkaiser/api/routes/websocket.py`, `mazinkaiser/observability/metrics.py`, `frontend/src/realtime/cockpitRealtime.ts`.
 
+## TypeScript client contracts (`packages/shared-types`)
+
+- **`@mazinkaiser/shared-types`** — Zod schemas and inferred types: `SKLTelemetryState`, `SKLMoveExecutionBatch`, `CockpitRealtimeEvent`, viewer IDs (`CameraMode`, lighting presets aligned with SKL defaults), governance labels (`AIAuditEvent`, `AIRiskClassification`), and `DiagnosticsReport` for structured cockpit health snapshots.
+- **Ingress validation** — Incoming `/ws/cockpit` JSON is parsed with **`parseCockpitRealtimePayload`**; HUD rows are normalized with **`parseTelemetryLoose`** so additive backend fields do not brick the UI.
+- **Traceability** — `frontend/src/stores/cockpitTraceStore.ts` records **`trace_id`** from `assistant*` frames so UI state can correlate with backend audit JSON lines and `X-Request-ID` flows.
+- **ISO / NIST alignment** — Shared types document AI management (ISO/IEC 42001) and risk language; **enforcement** remains in Python (`Safety Governor`, Pydantic). The TS layer is **documentation + client-side discipline**, not a second governor.
+- **Source of truth** — **Pydantic models in `mazinkaiser`** define wire compatibility; when the API evolves, update **`packages/shared-types`** in the same merge.
+- **Strictness** — `packages/shared-types` uses `exactOptionalPropertyTypes` where feasible; the Vite app enables `strict` + `noImplicitAny` without `exactOptionalPropertyTypes` to avoid large-scale churn while APIs stabilize.
+
+## AI governance architecture (ISO/IEC 42001 alignment)
+
+The **authoritative** AI policy path remains **server-side**: `Safety Governor`, `AIOrchestrator.evaluate_user_message`, file/JSON **audit** logging, and Pydantic request validation. On the client, TypeScript types (`AIAuditEvent`, `AIRiskClassification`, `ExplainabilityMetadata`, `OperatorAuthorizationTier`) **document** how UI and automation should think about risk, simulation-only posture, and trace correlation — they do **not** replace backend enforcement.
+
+| Concern | Backend seam | Client seam |
+|---------|----------------|-------------|
+| Traceability | `trace_id` on chat/assistant flows, `X-Request-ID` | `cockpitTraceStore`, Zod WS/REST coercion |
+| Explainability | Refusal reasons in orchestrator / audit records | Optional `SKLAIResponse.explainability` type for future UI |
+| Simulation-only | Twin kernel + domain semantics | Types + copy: never imply real-world actuation |
+
+## Event architecture (cockpit + twin)
+
+| Layer | Events | Notes |
+|--------|--------|--------|
+| Wire | `CockpitRealtimeEvent` (WS), REST envelopes (`apiContracts`) | Zod-validated at ingress where implemented |
+| Domain (client) | `CockpitEvent` union — telemetry, move batch, assistant, voice, **animation pipeline**, **memory** | For future bus/store; not required for rendering today |
+| Twin / moves | `SKLMoveExecutionBatch`, `animation_plan` cues | Same JSON as `docs/API.md` contract |
+| Voice | `VoiceIngestResponseWire` | Mirrors `POST /voice/ingest` |
+
+## Diagnostics and observability
+
+| Area | Mechanism |
+|------|-----------|
+| Server | `structlog`, health/metrics, audit JSON lines (`docs` Observability above) |
+| Client trace | `trace_id` capture in **`cockpitTraceStore`**; DEV warnings when REST/WS JSON drifts from Zod |
+| Cockpit report | `DiagnosticsReport`, `SystemHealthStatus`, `GlbLoadDiagnostic`, `AnimationPlaybackDiagnostic` in **`@mazinkaiser/shared-types`** — optional fields for dashboards and future SKL hooks |
+
+## Safety enforcement (ISO/IEC 27001 / NIST AI RMF — conceptual)
+
+- **API**: versioned REST, Pydantic on ingress, consistent error envelopes with `request_id`.
+- **Cognition**: safety governor before LLM; simulation semantics in **`DigitalTwinKernel`** (no “real robot” I/O in this repo).
+- **Client**: treat **`coerceCockpitEnvelope`** failures as **drift signals** (DEV logs), not as silent coercion into wrong types.
+
+## Viewer pipeline (Three.js / R3F)
+
+Presentation flow: **`resolveAvatarPresentation`** → **`ImageAvatarViewer`** / **`SKLModelViewer`** with **`SklMovePlaybackSnapshot`** and **`SklMoveAnimationPlayback`**. Shared types **`CameraMode`**, **`SKLViewerConfig`**, **`SKLModelMetadata`**, **`SKLAnimationState`** standardize naming across HUD and viewer settings; R3F best practice remains **bounded props** and **suspense** for GLB load.
+
+## GLB asset pipeline
+
+1. Source hull: **`mazinkaiser_skl.glb`** at repo root.  
+2. **`frontend` `predev` / `prebuild`**: `scripts/sync-mazinkaiser-skl-glb.mjs` copies into **`frontend/public/models/`**.  
+3. Viewer resolves URL via **`resolveSklModelUrl`** / constants; **clip** selection uses `sklClipMapping` + **`animation_plan`**.  
+4. Observability: **`glbLoadDiagnosticSchema`** and **`animationPlaybackDiagnosticSchema`** are ready for wiring to `useProgress` / mixer stats without changing REST.
+
 ## External runtime bridges
 
 `mazinkaiser/bridges/*` exposes **Protocols** for Unreal, Unity, ROS2 simulation, WebGL/Three.js presentation, and **local inference** servers. Implementations remain out-of-tree; they must not bypass **`evaluate_user_message`**.
