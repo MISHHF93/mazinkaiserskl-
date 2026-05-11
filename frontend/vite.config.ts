@@ -75,6 +75,10 @@ function createFilteredViteLogger() {
 export default defineConfig({
   customLogger: createFilteredViteLogger(),
   plugins: [react(), tailwindcss()],
+  build: {
+    /** Three.js + R3F — large vendor chunk; Vercel only warns in logs. */
+    chunkSizeWarningLimit: 1600,
+  },
   server: {
     port: 5173,
     strictPort: true,
