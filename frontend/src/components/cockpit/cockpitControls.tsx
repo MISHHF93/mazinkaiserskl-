@@ -1,5 +1,27 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
+/** Simulator / SKL viewport: shared floating chrome (hull deck + viewer rail). */
+export const SIM_FLOAT_PANEL =
+  'rounded-2xl border border-white/25 bg-[color-mix(in_srgb,#070910_94%,black)] shadow-[0_8px_32px_rgba(0,0,0,0.78)] ring-1 ring-black/55 backdrop-blur-md'
+
+/**
+ * Anchors hull command deck bottom-left, reserving the bottom-right quadrant for the SKL
+ * viewer icon rail (Fit / Gear / …) so controls do not overlap.
+ */
+export const SIM_HULL_DECK_ANCHOR =
+  'pointer-events-auto absolute z-[105] bottom-[max(0.3rem,env(safe-area-inset-bottom))] left-2 right-[6.75rem] max-h-[min(50dvh,560px)] sm:left-3 sm:bottom-3 sm:right-[7.25rem] flex flex-col justify-end'
+
+/** Top-right telemetry chips: stays inside viewport; clear of SKL dock on narrow widths. */
+export const SIM_HUD_METRICS_ANCHOR =
+  'absolute z-[105] top-2 right-2 flex max-w-[min(calc(100%-8rem),30rem)] flex-wrap justify-end gap-0.5 pt-0.5 pr-0.5 sm:top-2.5 sm:right-2.5'
+
+/** SKL viewer controls dock — above hull deck z-index so the rail stays clickable. */
+export const SIM_SKL_VIEWER_DOCK_Z = 'z-[110]'
+
+/** Uniform simulator text-button row (directive, pads, PTT). */
+export const SIM_ACTION_ROW = 'flex flex-wrap items-center gap-1'
+export const SIM_CTL_H = 'h-8 min-h-[32px]'
+
 /** Matches hull viewer actuator easing — industrial snap. */
 export const COCKPIT_ACTUATOR_EASE =
   '[transition-timing-function:cubic-bezier(0.22,1,0.36,1)] duration-[var(--duration-mzk-short)]'

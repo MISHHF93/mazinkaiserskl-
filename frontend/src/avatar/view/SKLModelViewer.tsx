@@ -50,7 +50,7 @@ import {
   type SklMaterialSurfaceId,
   type SklViewerExtSettings,
 } from './mazinkaiserGlbViewerSettings'
-import { CockpitPad, ViewerIconButton } from '../../components/cockpit/cockpitControls'
+import { CockpitPad, SIM_FLOAT_PANEL, SIM_SKL_VIEWER_DOCK_Z, ViewerIconButton } from '../../components/cockpit/cockpitControls'
 import { SvgDebug, SvgDockCollapse, SvgExpand, SvgFit, SvgGear, SvgReset } from '../../components/cockpit/viewerToolbarIcons'
 import { fetchAndApplySklMoveArtifactsCove } from './sklArtifactCove'
 
@@ -1098,7 +1098,9 @@ export function SKLModelViewer(props: {
         </Canvas>
       </div>
 
-      <div className="pointer-events-none absolute bottom-0 right-0 z-[100] flex max-w-[calc(100vw-0.35rem)] flex-col items-end gap-1.5 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pr-[max(0.25rem,env(safe-area-inset-right,0px))] pl-1.5 pt-1.5 sm:bottom-2.5 sm:right-2.5 lg:bottom-3 lg:right-3">
+      <div
+        className={`pointer-events-none absolute bottom-0 right-0 flex max-w-[calc(100vw-0.35rem)] flex-col items-end gap-1.5 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pr-[max(0.25rem,env(safe-area-inset-right,0px))] pl-1.5 pt-1.5 sm:bottom-2.5 sm:right-2.5 lg:bottom-3 lg:right-3 ${SIM_SKL_VIEWER_DOCK_Z}`}
+      >
         <div className="pointer-events-auto flex w-auto flex-col items-end gap-1.5">
           {hullDockExpanded && toolbarOpen ? (
             <div
@@ -1337,7 +1339,7 @@ export function SKLModelViewer(props: {
 
           {!hullDockExpanded ?
             <div
-              className="flex gap-0.5 rounded-xl border border-white/22 bg-[#070910]/92 p-0.5 shadow-[0_6px_28px_rgba(0,0,0,0.85)] ring-1 ring-black/65 backdrop-blur-md"
+              className={`${SIM_FLOAT_PANEL} flex gap-0.5 p-0.5`}
               onPointerDown={(e) => e.stopPropagation()}
             >
               <ViewerIconButton
@@ -1355,8 +1357,8 @@ export function SKLModelViewer(props: {
                 <SvgGear />
               </ViewerIconButton>
             </div>
-          :             <div
-              className="flex flex-wrap justify-end gap-1 rounded-xl border border-white/25 bg-[#070910]/94 p-1 shadow-[0_6px_28px_rgba(0,0,0,0.85)] ring-1 ring-black/70 backdrop-blur-md"
+          : <div
+              className={`${SIM_FLOAT_PANEL} flex flex-wrap justify-end gap-1 p-1`}
               onPointerDown={(e) => e.stopPropagation()}
             >
               <ViewerIconButton
