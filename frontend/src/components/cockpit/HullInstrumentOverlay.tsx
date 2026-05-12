@@ -1,10 +1,9 @@
 import type { FormEvent } from 'react'
 import { useEffect, useId } from 'react'
 import type { MechaHudState, PersonalityMode } from '../../types'
-import { KAISER_MOVES } from '../../types'
+import { KAISER_MOVES, PERSONALITY_MODES } from '../../types'
 import type { VoiceConsoleSlice, VoicePushToTalkProps } from './CommandConsole'
 import { CockpitWaveformStrip } from './CockpitWaveformStrip'
-import { cockpitExperienceLabel } from './cockpitExperienceMode'
 import {
   CockpitPad,
   CockpitPrimaryActuator,
@@ -12,6 +11,7 @@ import {
   HudSegmentRail,
   LabPad,
   SIM_HULL_DECK_ANCHOR,
+  SIM_HUD_SELECT,
   SIM_HUD_TOP_STATUS_STRIP,
   SIM_SKL_ANGULAR_PANEL,
 } from './cockpitControls'
@@ -34,6 +34,7 @@ export type HullInstrumentOverlayProps = {
   kaiserLine: string
   subtitleStreaming: boolean
   personalityMode: PersonalityMode
+  onPersonalityModeChange: (m: PersonalityMode) => void
   strictWake: boolean
   onStrictWakeChange: (v: boolean) => void
   onRunDiagnostics: () => void
@@ -118,7 +119,6 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
           <VitalBar label="AR" pct={d?.armor_integrity_pct ?? 0} title="Armor integrity (%)" />
         </div>
         <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-0.5 pl-0.5">
-            <MiniChip k="View" title="Cockpit experience" v={cockpitExperienceLabel('UNIFIED')} />
             <MiniChip
               k="Twin"
               title={props.twinStateLabel}
@@ -157,6 +157,7 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
             </span>
             <button
               type="button"
+              aria-pressed={props.ttsOn}
               onClick={props.toggleTts}
               className={`shrink-0 rounded-[2px] border px-1 py-0.5 font-mono text-[7px] uppercase tracking-[0.06em] sm:text-[8px] ${
                 props.ttsOn
@@ -178,7 +179,8 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
             </button>
             <button
               type="button"
-              title="Tactical console — pilot comms, move bus, hull advisories"
+              aria-label={diagnosticSurfaceActive ? 'Close tactical console' : 'Open tactical console'}
+              title="Tactical console — personality, voice log, move bus, hull advisories"
               className={`shrink-0 rounded-[2px] border px-1 py-0.5 font-mono text-[7px] font-bold uppercase tracking-[0.1em] sm:text-[8px] ${
                 diagnosticSurfaceActive ?
                   'border-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_24%,black)] text-[var(--color-mzk-skull-bone)]'
@@ -208,7 +210,11 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
             >
               {props.kaiserLine}
             </p>
-            <form className="w-full min-w-0" onSubmit={props.onCommandSubmit}>
+            <form
+              className="w-full min-w-0"
+              aria-label="Kaiser directive, execute, and voice"
+              onSubmit={props.onCommandSubmit}
+            >
               <HudSegmentRail className="w-full flex-col gap-px sm:flex-row sm:flex-nowrap">
                 <div className="flex min-h-8 min-w-0 w-full flex-1 items-center bg-[color-mix(in_srgb,black_58%,transparent)] px-1.5 py-px pointer-coarse:min-h-10 sm:min-h-7 sm:px-2">
                   <label htmlFor="hull-lab-cmd-mini" className="sr-only">
@@ -288,7 +294,7 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
                     Tactical console
                   </p>
                   <p className="truncate font-mono text-[8px] uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_55%,transparent)]">
-                    Voice · move bus · hull advisories
+                    Personality · voice · moves · hull
                   </p>
                 </div>
                 <button
@@ -374,14 +380,24 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
                   <h3 className="border-b border-[color-mix(in_srgb,var(--color-mzk-plasma)_14%,transparent)] pb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]">
                     Combat · move bus
                   </h3>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p
-                      className="min-h-8 flex-1 rounded-md border border-white/15 bg-black/55 px-2 py-1.5 font-mono text-[clamp(10px,2.2vw,11px)] uppercase tracking-[0.05em] text-white/90 pointer-coarse:min-h-11"
-                      title="Unified personality profile"
+                  <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                    <label htmlFor={`${deckTabId}-personality`} className="sr-only">
+                      Personality mode
+                    </label>
+                    <select
+                      id={`${deckTabId}-personality`}
+                      className={`${SIM_HUD_SELECT} !min-h-8 w-full max-w-none !py-1 !text-[9px] !font-mono uppercase tracking-[0.05em] pointer-coarse:!min-h-11`}
+                      value={props.personalityMode}
+                      title="Personality lattice — cockpit cognition profile"
+                      onChange={(e) => props.onPersonalityModeChange(e.target.value as PersonalityMode)}
                     >
-                      Personality · {props.personalityMode.replace(/_/g, ' ')}
-                    </p>
-                    <label className="flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md border border-white/22 bg-black/70 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.05em] text-white/90 pointer-coarse:min-h-11">
+                      {PERSONALITY_MODES.map((m) => (
+                        <option key={m} value={m}>
+                          {m.replace(/_/g, ' ')}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="flex min-h-8 cursor-pointer items-center gap-1.5 justify-self-end rounded-md border border-white/22 bg-black/70 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.05em] text-white/90 pointer-coarse:min-h-11">
                       <input
                         type="checkbox"
                         checked={props.strictWake}

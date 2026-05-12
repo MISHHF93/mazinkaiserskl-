@@ -202,6 +202,11 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
                 Voice. Open the full tactical sheet with <strong>≡</strong> in the top strip only.
               </li>
               <li>
+                <strong className="text-[var(--color-mzk-reactor-white)]">Tactical console</strong> (<strong>≡</strong>)
+                — personality mode, strict wake, diagnostics, tactical environment text, catalog move bus, ML hull lab
+                presets, and hull advisories in one scroll.
+              </li>
+              <li>
                 <strong className="text-[var(--color-mzk-reactor-white)]">3D hull</strong> — camera preset dropdown and
                 fullscreen on the viewport dock; Fit and gear bottom-right. <strong>Inspector</strong> is a floating chip
                 over the mesh (does not steal canvas height).
@@ -245,6 +250,7 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
               kaiserLine={props.kaiserLine}
               subtitleStreaming={props.subtitleStreaming}
               personalityMode={props.personalityMode}
+              onPersonalityModeChange={props.onPersonalityModeChange}
               strictWake={props.strictWake}
               onStrictWakeChange={props.onStrictWakeChange}
               onRunDiagnostics={props.onRunDiagnostics}
