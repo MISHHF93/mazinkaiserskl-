@@ -10,6 +10,7 @@
   ],
   "description": "Repo root — run npm scripts here; app package is in frontend/",
   "scripts": {
+    "postinstall": "node scripts/ensure-rolldown-linux-binding.cjs",
     "start": "npm --prefix frontend run dev",
     "dev": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
