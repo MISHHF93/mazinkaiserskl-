@@ -16,6 +16,7 @@ const MAP: Record<string, MoveVisualKind> = {
   'scrander-boomerang': 'thruster',
   'mazin-field-simulation': 'field',
   wave: 'field',
+  hi: 'neutral',
   walk: 'thruster',
   salute: 'neutral',
 }

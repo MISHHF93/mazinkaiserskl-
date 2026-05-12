@@ -31,6 +31,7 @@ import type { AvatarPresentation, SklMovePlaybackSnapshot } from '../presentatio
 import type { CockpitExperienceMode } from '../../components/cockpit/cockpitExperienceMode'
 import type { CameraMode } from '@mazinkaiser/shared-types'
 import { SklMoveAnimationPlayback } from './SklMoveAnimationPlayback'
+import { SklProceduralGreetingMotor } from './SklProceduralGreetingMotor'
 import {
   MAZINKAISER_SKL_GLB_PRIMARY_BASENAME,
   MAZINKAISER_SKL_GLB_PUBLIC_URL,
@@ -1034,6 +1035,7 @@ function SklLoadedModel(props: SklLoadedProps) {
           animations={animations}
           playback={movePlayback}
         />
+        <SklProceduralGreetingMotor rootRef={rootRef} playback={movePlayback} />
       </Suspense>
 
       {settings.showGrid || lighting === 'DIAGNOSTIC' ? (
@@ -1680,7 +1682,7 @@ export function SKLModelViewer(props: {
                   <p>
                     SKL clip playback:{' '}
                     {(digest?.animClipCount ?? 0) === 0 ?
-                      '0 clips — playback idle'
+                      '0 clips — glTF mixer idle; wave / hi / salute demos wobble hull root'
                     : movePlayback.phase === 'executing' ?
                       `executing · ${movePlayback.animationPlan.length} cue(s)`
                     : `idle (${movePlayback.phase})`}

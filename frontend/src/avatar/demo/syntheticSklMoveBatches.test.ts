@@ -10,8 +10,8 @@ import {
 } from './syntheticSklMoveBatches'
 
 describe('syntheticSklMoveBatches', () => {
-  it('exposes three ML demo presets with stable slugs', () => {
-    expect(SKL_ML_DEMO_PRESETS.map((p) => p.slug)).toEqual(['wave', 'walk', 'salute'])
+  it('exposes ML demo presets with stable slugs', () => {
+    expect(SKL_ML_DEMO_PRESETS.map((p) => p.slug)).toEqual(['wave', 'hi', 'walk', 'salute'])
   })
 
   it('findMlDemoPreset is case-insensitive', () => {

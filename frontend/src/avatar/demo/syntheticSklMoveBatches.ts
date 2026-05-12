@@ -40,6 +40,11 @@ export const SKL_ML_DEMO_PRESETS: readonly SklMlDemoPreset[] = [
     voiceLine: 'Synthetic pilot · wave channel — movement artifact bound for resonance overlay.',
   },
   {
+    slug: 'hi',
+    label: 'Hi (ML demo)',
+    voiceLine: 'Synthetic pilot · quick hull nod — procedural greeting channel.',
+  },
+  {
     slug: 'walk',
     label: 'Walk (ML demo)',
     voiceLine: 'Synthetic pilot · gait envelope — locomotion artifact streaming to SKL mixer.',
