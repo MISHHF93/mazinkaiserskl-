@@ -14,7 +14,7 @@ export type MazinkaiserGlbViewerSettings = {
   wireframe: boolean
   /** Studio floor grid */
   showGrid: boolean
-  /** OrbitControls damping (0.02–0.2 typical) */
+  /** OrbitControls damping factor — lower = longer inertial glide after drag (bee-like orbit). */
   damping: number
   /** FOV degrees */
   fov: number
@@ -32,8 +32,8 @@ export const DEFAULT_GLB_VIEWER_SETTINGS: MazinkaiserGlbViewerSettings = {
   wireframe: false,
   /** Deck grid helps align orbit/pan on all displays; still toggled from hull gear strip. */
   showGrid: true,
-  /** Slightly lower = orbit stops more quickly with less "drift" after release. */
-  damping: 0.06,
+  /** ~0.03–0.05: smooth coast; higher values feel “stiff” when orbiting the hull. */
+  damping: 0.036,
   fov: 44,
 }
 

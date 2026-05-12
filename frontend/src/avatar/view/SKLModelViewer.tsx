@@ -275,8 +275,8 @@ function digestStableSignature(d: SklModelDigest): string {
   ].join('|')
 }
 
-/** Y-axis pivot bias toward bust / head (0 = deck, 1 = roof of hull mesh AABB). */
-const HULL_ORBIT_PIVOT_HEIGHT_FRAC = 0.68
+/** Y-axis pivot on hull AABB (0 = feet plane, 1 = top). Mid-high ≈ torso — easier “around the body” orbit than bust-only. */
+const HULL_ORBIT_PIVOT_HEIGHT_FRAC = 0.56
 
 /** Delay after drei Bounds.fit finishes (~maxDuration) before shifting orbit target — avoids fighting the fit tween. */
 const POST_HULL_FIT_PIVOT_MS = 520
@@ -830,7 +830,8 @@ function SklLoadedModel(props: SklLoadedProps) {
     const ext = Math.max(d.maxDim, 1e-6)
     modelExtentRef.current = ext
     setOrbitDistanceLimits({
-      min: Math.max(ext * 0.0028, 0.008),
+      /** Tighter min = you can tuck the camera closer to detail without the rig feeling “locked out”. */
+      min: Math.max(ext * 0.00185, 0.005),
       max: Math.max(ext * 40, 28),
     })
     setFootPlaneY((prev) => {
@@ -878,7 +879,7 @@ function SklLoadedModel(props: SklLoadedProps) {
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
     const mq = window.matchMedia('(pointer: coarse)')
-    const sync = () => setCoarsePointerOrbitMul(mq.matches ? 1.32 : 1)
+    const sync = () => setCoarsePointerOrbitMul(mq.matches ? 1.42 : 1)
     sync()
     mq.addEventListener('change', sync)
     return () => mq.removeEventListener('change', sync)
@@ -926,9 +927,10 @@ function SklLoadedModel(props: SklLoadedProps) {
         screenSpacePanning={false}
         minPolarAngle={0.01}
         maxPolarAngle={Math.PI - 0.01}
-        rotateSpeed={1.75 * coarsePointerOrbitMul}
-        zoomSpeed={2.15 * coarsePointerOrbitMul}
-        panSpeed={1.65 * coarsePointerOrbitMul}
+        /** Calibrated for fluid orbit + easier re-aim: higher gains, damping lowered in viewer defaults. */
+        rotateSpeed={2.12 * coarsePointerOrbitMul}
+        zoomSpeed={2.52 * coarsePointerOrbitMul}
+        panSpeed={2.18 * coarsePointerOrbitMul}
         autoRotate={settings.autoRotate}
         autoRotateSpeed={settings.autoRotateSpeed}
         minDistance={orbitDistanceLimits.min}
@@ -1472,7 +1474,9 @@ export function SKLModelViewer(props: {
                     </summary>
                     <p className="border-t border-white/10 px-2 py-1.5 text-[clamp(10px,2.5vw,12px)] leading-relaxed text-white/82">
                       Drag on the hull (not the toolbar): <strong>left</strong> = orbit · <strong>right</strong> = pan ·{' '}
-                      <strong>wheel</strong> = zoom · <strong>double-click</strong> = pivot · middle = dolly · Reset = fit.
+                      <strong>wheel</strong> = zoom to cursor · <strong>middle</strong> = dolly ·{' '}
+                      <strong>double-click / double-tap</strong> = snap orbit pivot to the surface under the pointer so you
+                      can “stand” anywhere on the mesh. <strong>Reset view</strong> = fit + camera preset.
                     </p>
                   </details>
                   <div className="flex flex-wrap gap-1.5">
