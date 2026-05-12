@@ -23,6 +23,7 @@ import { subscribeMazinkaiserVoicesReady } from './speech/kaiserVoice'
 import { KAISER_MOVES, type MechaHudState, type PersonalityMode } from './types'
 import { cockpitUplinkDisabled } from './config'
 import { normalizeWakeSnippet } from './voice/wakeArchitecture'
+import { applyHullVoiceNluFromIngest, voiceIngestSuppressesChat } from './voice/applyHullVoiceNlu'
 
 function matchesWakePrefix(text: string, prefixes: string[]): boolean {
   const t = text.trim().toLowerCase()
@@ -129,6 +130,21 @@ export default function App() {
     () => typeof localStorage !== 'undefined' && localStorage.getItem('mazinkaiser.strictWake') === '1',
   )
 
+  /** Stable backend session for voice NLU when WS session id is not yet assigned. */
+  const voiceBridgeSessionId = useMemo(() => {
+    try {
+      const k = 'mzk.voiceBridgeSession'
+      let id = localStorage.getItem(k)
+      if (!id) {
+        id = globalThis.crypto?.randomUUID?.() ?? `vb-${Date.now()}`
+        localStorage.setItem(k, id)
+      }
+      return id
+    } catch {
+      return `vb-${Date.now()}`
+    }
+  }, [])
+
   const onInboundMoveBatch = useCallback(
     (batch: MoveBatchWire) => {
       const phase = moveLayerRef.current.phase
@@ -225,36 +241,6 @@ export default function App() {
     },
     [strictWake, wakePrefixes, sendChat, mode, status, sessionId, ingestAssistantRestReply],
   )
-
-  const voice = useVoiceInteractionLayer({
-    onUserFinalTranscript: (text) => {
-      const raw = text.trim()
-      setTranscript(raw)
-      if (!raw) return
-      if (strictWake && !matchesWakePrefix(raw, wakePrefixes)) {
-        setTranscript('Wake phrase required. Lead with “Kaiser,” (or disable strict wake).')
-        return
-      }
-      if (!sessionId) return
-      void (async () => {
-        try {
-          const ing = await api.postVoiceIngest(sessionId, raw, false)
-          const sent = ing.normalized_text.trim() ? ing.normalized_text : raw
-          dispatchPilotText(sent, true)
-          setTranscript(
-            `[Voice] ${raw.slice(0, 96)}${raw.length > 96 ? '…' : ''} → Kaiser: ${sent.slice(0, 96)}${sent.length > 96 ? '…' : ''}`,
-          )
-        } catch (e) {
-          logOptionalApiFailure('voice ingest (mic)', e)
-          dispatchPilotText(raw)
-          setTranscript('Voice ingest failed — sent raw transcript.')
-        }
-      })()
-    },
-    onActivityChange: (listening) => {
-      setMicListening(listening)
-    },
-  })
 
   useEffect(() => {
     if (!assistDone) return
@@ -375,6 +361,42 @@ export default function App() {
     [clearMoveTimers, finalizeExecutingMoveBatch],
   )
 
+  const voice = useVoiceInteractionLayer({
+    onUserFinalTranscript: (text) => {
+      const raw = text.trim()
+      setTranscript(raw)
+      if (!raw) return
+      if (strictWake && !matchesWakePrefix(raw, wakePrefixes)) {
+        setTranscript('Wake phrase required. Lead with “Kaiser,” (or disable strict wake).')
+        return
+      }
+      const sid = sessionId ?? voiceBridgeSessionId
+      void (async () => {
+        try {
+          const ing = await api.postVoiceIngest(sid, raw, false)
+          const hullLine = applyHullVoiceNluFromIngest(ing, { runMove, runMlDemoMove })
+          const suppress = voiceIngestSuppressesChat(ing)
+          if (!suppress) {
+            const sent = ing.normalized_text.trim() ? ing.normalized_text : raw
+            dispatchPilotText(sent, true)
+          }
+          const sentDisplay = (ing.normalized_text.trim() ? ing.normalized_text : raw).trim()
+          setTranscript(
+            hullLine ||
+              `[Voice] ${raw.slice(0, 96)}${raw.length > 96 ? '…' : ''} → Kaiser: ${sentDisplay.slice(0, 96)}${sentDisplay.length > 96 ? '…' : ''}`,
+          )
+        } catch (e) {
+          logOptionalApiFailure('voice ingest (mic)', e)
+          dispatchPilotText(raw)
+          setTranscript('Voice ingest failed — sent raw transcript.')
+        }
+      })()
+    },
+    onActivityChange: (listening) => {
+      setMicListening(listening)
+    },
+  })
+
   const cycleHullAnimationTest = useCallback(() => {
     const n = KAISER_MOVES.length
     const idx = demoMoveCycleRef.current % n
@@ -410,19 +432,25 @@ export default function App() {
       setTranscript('Wake phrase required. Lead with “Kaiser,” (or disable strict wake).')
       return
     }
-    if (!sessionId) return
+    const sid = sessionId ?? voiceBridgeSessionId
     try {
-      const ing = await api.postVoiceIngest(sessionId, draft, false)
+      const ing = await api.postVoiceIngest(sid, draft, false)
+      const hullLine = applyHullVoiceNluFromIngest(ing, { runMove, runMlDemoMove })
+      const suppress = voiceIngestSuppressesChat(ing)
+      if (!suppress) {
+        const sent = ing.normalized_text.trim() ? ing.normalized_text : draft
+        dispatchPilotText(sent, true)
+      }
       const sent = ing.normalized_text.trim() ? ing.normalized_text : draft
-      dispatchPilotText(sent, true)
       setTranscript(
-        `Voice ingest · ${ing.parsed.verb} (${String(ing.intent ?? '—')}). Normalized: ${sent.slice(0, 120)}${sent.length > 120 ? '…' : ''}`,
+        hullLine ||
+          `Voice ingest · ${ing.parsed.verb} (${String(ing.intent ?? '—')}). Normalized: ${sent.slice(0, 120)}${sent.length > 120 ? '…' : ''}`,
       )
     } catch (e) {
       logOptionalApiFailure('voice ingest (normalize)', e)
       setTranscript('Voice ingest failed (backend).')
     }
-  }, [dispatchPilotText, input, sessionId, strictWake, voice.lastHeard, wakePrefixes])
+  }, [dispatchPilotText, input, sessionId, strictWake, voice.lastHeard, voiceBridgeSessionId, wakePrefixes, runMove, runMlDemoMove])
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()

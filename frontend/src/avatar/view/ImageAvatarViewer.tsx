@@ -9,7 +9,6 @@ import {
 } from '../constants'
 import { readDevAvatarFixture } from './devAvatarFixture'
 import { GlbHullMissingNotice } from './GlbHullMissingNotice'
-import type { CockpitExperienceMode } from '../../components/cockpit/cockpitExperienceMode'
 import { MazinkaiserGlbInspector, type GlbInspectorStatus } from './MazinkaiserGlbInspector'
 import { SKLModelViewer, type HullViewportState } from './SKLModelViewer'
 
@@ -20,7 +19,8 @@ export type MazinkaiserStudioState = HullViewportState
 export type ImageAvatarViewerProps = {
   presentation: AvatarPresentation
   movePlayback?: SklMovePlaybackSnapshot
-  cockpitExperienceMode?: CockpitExperienceMode
+  /** Tactical console open — biases SKL auto camera toward diagnostic framing. */
+  diagnosticSurfaceActive?: boolean
   /**
    * Hull-based UX — the SKL shell fills the cockpit stage; `hudOverlay` mounts instruments on the hull over WebGL.
    * When false, framed panel layout (narrow twin column) for legacy contexts.
@@ -35,7 +35,7 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
     hullSurface = false,
     hudOverlay,
     movePlayback,
-    cockpitExperienceMode,
+    diagnosticSurfaceActive,
   } = props
   const fixture = useMemo(() => readDevAvatarFixture(), [])
   const fixtureForceAbsent = fixture === 'glb-absent'
@@ -125,7 +125,7 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
                   key={`skl-view-${sklViewerMountKey}`}
                   presentation={p}
                   movePlayback={movePlayback ?? undefined}
-                  cockpitExperienceMode={cockpitExperienceMode}
+                  diagnosticSurfaceActive={diagnosticSurfaceActive}
                   forceError={fixtureForceAbsent}
                   onHullState={onViewportHull}
                 />

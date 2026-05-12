@@ -6,7 +6,6 @@ import { ImageAvatarViewer } from '../../avatar/view/ImageAvatarViewer'
 import { MoveDemonstrationOverlay } from '../../avatar/view/MoveDemonstrationOverlay'
 import type { MazinkaiserCinematicScaleProfile, MechaHudState, PersonalityMode } from '../../types'
 import type { VoiceConsoleSlice, VoicePushToTalkProps } from './CommandConsole'
-import { cockpitExperienceLabel, deriveCockpitExperienceMode } from './cockpitExperienceMode'
 import { HullInstrumentOverlay } from './HullInstrumentOverlay'
 
 type CinematicCockpitProps = {
@@ -70,15 +69,16 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
   const [diagnosticSurfaceActive, setDiagnosticSurfaceActive] = useState(false)
   const controlsHelpTitleId = useId()
 
-  const cockpitExperienceMode = useMemo(
-    () =>
-      deriveCockpitExperienceMode({
-        presentation: props.avatarPresentation,
-        movePlayback: props.movePlayback,
-        diagnosticSurfaceActive,
-      }),
-    [props.avatarPresentation, props.movePlayback, diagnosticSurfaceActive],
-  )
+  const cockpitVisual = useMemo(() => {
+    const ph = props.movePlayback.phase
+    const moveHot = ph === 'charging' || ph === 'executing' || ph === 'cooldown'
+    const combat = props.avatarPresentation.semantic === 'COMBAT_READY'
+    const diag = diagnosticSurfaceActive || props.avatarPresentation.semantic === 'DIAGNOSTIC'
+    const infernoPulse = moveHot ? 1 : combat ? 0.55 : diag ? 0.35 : 0.22
+    return { infernoPulse, moveHot, combat, diag }
+  }, [props.movePlayback.phase, props.avatarPresentation.semantic, diagnosticSurfaceActive])
+
+  const infernoPulse = cockpitVisual.infernoPulse
 
   useEffect(() => {
     if (!controlsHelpOpen) return
@@ -88,15 +88,6 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [controlsHelpOpen])
-
-  const infernoPulse =
-    cockpitExperienceMode === 'MOVE_DEMO' || cockpitExperienceMode === 'FINAL_COUNT'
-      ? 1
-      : cockpitExperienceMode === 'COMBAT_READY'
-        ? 0.55
-        : cockpitExperienceMode === 'DIAGNOSTIC'
-          ? 0.35
-          : 0.22
 
   const cockpitVars = {
     '--mzk-photon-01': clamp01(h?.photon_power_pct ?? 74),
@@ -116,7 +107,7 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
 
   return (
     <div
-      data-cockpit-experience={cockpitExperienceMode}
+      data-cockpit-experience="UNIFIED"
       className="relative flex h-full min-h-0 flex-col font-display-scope bg-[var(--color-mzk-black)] [--scan:5px]"
       style={cockpitVars}
     >
@@ -175,75 +166,8 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
 
       <div
         aria-hidden
-        className="animate-mzk-tactical-scan pointer-events-none fixed left-0 top-0 z-0 h-[12vh] w-full bg-gradient-to-b from-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_12%,transparent)] to-transparent opacity-[0.34]"
+        className="animate-mzk-tactical-scan pointer-events-none fixed left-0 top-0 z-0 h-[10vh] w-full bg-gradient-to-b from-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_10%,transparent)] to-transparent opacity-[0.28]"
       />
-
-      <header className="pointer-events-none absolute left-0 right-0 top-0 z-[130] flex justify-center px-2 pt-[max(0.2rem,env(safe-area-inset-top))]">
-        <div className="pointer-events-auto flex w-full max-w-[min(100%,56rem)] flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-b-md border border-t-0 border-[color-mix(in_srgb,var(--color-mzk-skull-bone)_22%,var(--color-mzk-plasma)_12%)] bg-[color-mix(in_srgb,var(--color-mzk-gunmetal)_72%,black)] px-2 py-1 shadow-[0_10px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
-          <div className="min-w-0 flex flex-1 items-center gap-x-2 gap-y-0.5">
-            <p className="shrink-0 font-mono text-[7px] uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_82%,var(--color-mzk-blood-energy)_12%)] sm:text-[8px]">
-              SKL
-            </p>
-            <span
-              className={`shrink-0 rounded-[2px] border px-1.5 py-0.5 font-mono text-[7px] uppercase tracking-[0.1em] sm:text-[8px] ${
-                cockpitExperienceMode === 'MOVE_DEMO' || cockpitExperienceMode === 'FINAL_COUNT'
-                  ? 'border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_18%,black)] text-[var(--color-mzk-inferno-yellow)]'
-                : cockpitExperienceMode === 'COMBAT_READY'
-                  ? 'border-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_45%,transparent)] bg-black/70 text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_92%,white)]'
-                : cockpitExperienceMode === 'DIAGNOSTIC'
-                  ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_40%,transparent)] bg-black/75 text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]'
-                : 'border-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_42%,transparent)] bg-black/65 text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_92%,transparent)]'
-              }`}
-              title="Cockpit experience mode"
-            >
-              {cockpitExperienceLabel(cockpitExperienceMode)}
-            </span>
-            <h1 className="min-w-0 truncate font-[family-name:var(--font-display)] text-[clamp(0.68rem,2.2vw,1rem)] font-extrabold tracking-tight text-[var(--color-mzk-skull-bone)] [text-shadow:0_0_12px_color-mix(in_srgb,var(--color-mzk-blood-energy)_22%,transparent),0_0_2px_black]">
-              Kaiser Core
-            </h1>
-          </div>
-
-          <div className="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1 text-[clamp(8px,2.1vw,10px)]">
-            <button
-              type="button"
-              onClick={() => setControlsHelpOpen(true)}
-              className="rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_38%,transparent)] bg-black/55 px-1.5 py-0.5 font-mono uppercase tracking-[0.08em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_90%,white)] hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_14%,black)] sm:px-2 sm:py-1"
-              title="HUD map"
-              aria-label="Open HUD map"
-            >
-              Help
-            </button>
-            <span
-              className={`rounded-[2px] border px-1.5 py-0.5 font-mono uppercase tracking-[0.1em] sm:px-2 sm:py-1 ${
-                props.wsStatus === 'open'
-                  ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_14%,transparent)] text-[var(--color-mzk-reactor-white)]'
-                  : props.wsStatus === 'preview'
-                    ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_95%,white)]'
-                  : 'border-[color-mix(in_srgb,var(--color-mzk-warning-flare)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-warning-orange)_16%,transparent)] text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_95%,var(--color-mzk-warning-flare))]'
-              }`}
-            >
-              {props.wsStatus === 'preview' ? 'LOCAL' : props.wsStatus === 'open' ? 'LINK' : props.wsStatus}
-            </span>
-            <span
-              className="hidden max-w-[5.5rem] truncate rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-silver)_45%,transparent)] bg-black/60 px-1.5 py-0.5 font-mono text-[color-mix(in_srgb,var(--color-mzk-silver-bright)_88%,transparent)] sm:inline sm:max-w-[7rem] sm:px-2 sm:py-1"
-              title={props.sessionId ?? undefined}
-            >
-              {props.sessionId ? props.sessionId.slice(0, 8) : '—'}
-            </span>
-            <button
-              type="button"
-              onClick={props.toggleTts}
-              className={`rounded-[2px] border px-1.5 py-0.5 font-mono uppercase tracking-[0.08em] sm:px-2 sm:py-1 ${
-                props.ttsOn
-                  ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma-violet)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_14%,transparent)] text-[var(--color-mzk-reactor-white)] hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_26%,transparent)]'
-                  : 'border-[color-mix(in_srgb,var(--color-mzk-silver-dim)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-black-plate)_90%,transparent)] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,transparent)] hover:text-[var(--color-mzk-reactor-white)]'
-              }`}
-            >
-              TTS {props.ttsOn ? 'ON' : 'OFF'}
-            </button>
-          </div>
-        </div>
-      </header>
 
       {controlsHelpOpen ?
         <div
@@ -267,12 +191,15 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
             </h2>
             <ul className="mt-3 list-inside list-disc space-y-2 leading-relaxed text-white/88">
               <li>
-                <strong className="text-[var(--color-mzk-reactor-white)]">Top bar</strong> floats over the hull — uplink, session id, TTS. It does not shrink the 3D stage.
+                <strong className="text-[var(--color-mzk-reactor-white)]">Unified HUD strip</strong> (top of the hull)
+                — compact vitals, uplink (shows <strong>···</strong> while connecting), session id, TTS, <strong>?</strong>{' '}
+                help, and <strong>≡</strong> tactical console in one flat row (scrolls horizontally on very narrow
+                viewports).
               </li>
               <li>
-                <strong className="text-[var(--color-mzk-reactor-white)]">Kaiser command</strong> — bottom-left deck
-                (directive + Execute). Open <strong>Console</strong> (status strip or deck) for voice log, combat bus,
-                and hull advisories.
+                <strong className="text-[var(--color-mzk-reactor-white)]">Kaiser command</strong> — bottom-left deck:
+                optional waveform, Kaiser line, then one segmented row: directive, <strong>Exec</strong>, PTT, Mic,
+                Voice. Open the full tactical sheet with <strong>≡</strong> in the top strip only.
               </li>
               <li>
                 <strong className="text-[var(--color-mzk-reactor-white)]">3D hull</strong> — camera preset dropdown and
@@ -280,8 +207,8 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
                 over the mesh (does not steal canvas height).
               </li>
               <li>
-                <strong className="text-[var(--color-mzk-reactor-white)]">Vitals</strong> — PH / SY / TH / AR stay in the
-                compact top-right strip on the hull.
+                <strong className="text-[var(--color-mzk-reactor-white)]">Vitals</strong> — PH / SY / TH / AR are the
+                four compact meters on the left side of the same top strip as the status chips.
               </li>
             </ul>
             <button
@@ -303,10 +230,13 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
           hullSurface
           presentation={props.avatarPresentation}
           movePlayback={props.movePlayback}
-          cockpitExperienceMode={cockpitExperienceMode}
+          diagnosticSurfaceActive={diagnosticSurfaceActive}
           hudOverlay={
             <HullInstrumentOverlay
-              cockpitExperienceMode={cockpitExperienceMode}
+              wsStatus={props.wsStatus}
+              ttsOn={props.ttsOn}
+              toggleTts={props.toggleTts}
+              onHudHelp={() => setControlsHelpOpen(true)}
               diagnosticSurfaceActive={diagnosticSurfaceActive}
               onDiagnosticSurfaceChange={setDiagnosticSurfaceActive}
               twinStateLabel={props.avatarPresentation.stateLabel}
@@ -316,7 +246,6 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
               subtitleStreaming={props.subtitleStreaming}
               personalityMode={props.personalityMode}
               strictWake={props.strictWake}
-              onPersonalityModeChange={props.onPersonalityModeChange}
               onStrictWakeChange={props.onStrictWakeChange}
               onRunDiagnostics={props.onRunDiagnostics}
               tacticalSnippet={props.tacticalSnippet}
@@ -340,12 +269,6 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
           }
         />
       </main>
-
-      {props.wsStatus === 'connecting' ? (
-        <div className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom,0px))] right-[max(1rem,env(safe-area-inset-right,0px))] z-[50] max-w-[min(420px,calc(100vw-2rem))] rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_38%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-black)_92%,black)] px-3 py-2.5 font-mono text-[clamp(9px,2.6vw,11px)] uppercase leading-snug tracking-[0.2em] text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_95%,var(--color-mzk-plasma-ice))] shadow-[0_0_32px_color-mix(in_srgb,var(--color-mzk-plasma)_22%,transparent)] backdrop-blur-md sm:tracking-[0.24em]">
-          Connecting to Kaiser Core…
-        </div>
-      ) : null}
     </div>
   )
 }

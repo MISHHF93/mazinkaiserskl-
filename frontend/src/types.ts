@@ -43,15 +43,8 @@ export type PersonalityMode =
   | 'KAISER_CORE_MODE'
   | 'OVERDRIVE_WARNING_MODE'
 
-export const PERSONALITY_MODES: PersonalityMode[] = [
-  'KAISER_CORE_MODE',
-  'PILOT_ASSIST_MODE',
-  'TACTICAL_MODE',
-  'OVERDRIVE_WARNING_MODE',
-  'ENGINEER_MODE',
-  'GUARDIAN_MODE',
-  'PROFESSOR_MODE',
-]
+/** Single unified pilot-facing mode in the UI; backend type keeps full enum for wire compatibility. */
+export const PERSONALITY_MODES: PersonalityMode[] = ['KAISER_CORE_MODE']
 
 export const KAISER_MOVES = [
   'Rocket Punch',

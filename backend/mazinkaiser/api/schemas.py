@@ -275,6 +275,8 @@ class VoiceIngestResponse(BaseModel):
     tts_hints: dict[str, Any]
     wake_routing: dict[str, Any]
     chat: ChatResponse | None = None
+    hull_voice_nlp: dict[str, Any] = Field(default_factory=dict)
+    hull_voice_nlu: dict[str, Any] = Field(default_factory=dict)
 
 
 class VoiceStreamRequest(BaseModel):

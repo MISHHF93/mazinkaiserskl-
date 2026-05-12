@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     voice_stt_provider: Literal["browser_passthrough", "whisper_remote"] = "browser_passthrough"
     voice_tts_provider: Literal["browser_client", "future_http_stream"] = "browser_client"
 
+    #: Deterministic hull NLP/NLU bundles on ``POST /voice/ingest`` (SPA drives SKL from ``actions``).
+    voice_hull_voice_models_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("VOICE_HULL_VOICE_MODELS_ENABLED", "HULL_VOICE_MODELS_ENABLED"),
+    )
+
     #: JSON publish bundle with SPA (`mazinkaiser-move-artifacts.cove.json` + inspect + nodes): fed into LLM briefing.
     skl_artifacts_public_dir: str | None = Field(default=None, validation_alias="MAZINKAISER_SKL_ARTIFACTS_DIR")
 

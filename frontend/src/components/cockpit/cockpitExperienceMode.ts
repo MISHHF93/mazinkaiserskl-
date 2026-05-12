@@ -1,39 +1,29 @@
 import type { AvatarPresentation } from '../../avatar/presentation'
 import type { SklMovePlaybackSnapshot } from '../../avatar/presentation/types'
+import type { CameraMode } from '@mazinkaiser/shared-types'
 
 /**
- * UI-only cockpit framing modes (orthogonal to backend `PersonalityMode`).
- * Drives chrome, SKL camera hints, and overlay intensity.
+ * Single cockpit UX mode. Framing (camera, chrome intensity) still follows live
+ * `CockpitExperienceInput` via {@link unifiedCockpitCameraPreset}.
  */
-export type CockpitExperienceMode =
-  | 'PILOT_VIEW'
-  | 'COMBAT_READY'
-  | 'DIAGNOSTIC'
-  | 'MOVE_DEMO'
-  | 'FINAL_COUNT'
+export type CockpitExperienceMode = 'UNIFIED'
 
 export type CockpitExperienceInput = {
   presentation: AvatarPresentation
   movePlayback: SklMovePlaybackSnapshot
-  /** User opened diagnostics drawer or forced diagnostic SKL view */
+  /** User opened diagnostics / tactical console or forced diagnostic SKL view */
   diagnosticSurfaceActive: boolean
 }
 
-/**
- * Priority: active move → diagnostic surface / semantic → combat → pilot default.
- */
-export function deriveCockpitExperienceMode(i: CockpitExperienceInput): CockpitExperienceMode {
-  const ph = i.movePlayback.phase
-  if (ph === 'charging' || ph === 'executing') return 'MOVE_DEMO'
-  if (ph === 'cooldown') return 'FINAL_COUNT'
-
-  if (i.diagnosticSurfaceActive || i.presentation.semantic === 'DIAGNOSTIC') return 'DIAGNOSTIC'
-
-  if (i.presentation.semantic === 'COMBAT_READY') return 'COMBAT_READY'
-
-  return 'PILOT_VIEW'
+export function cockpitExperienceLabel(_m: CockpitExperienceMode): string {
+  return 'Unified'
 }
 
-export function cockpitExperienceLabel(m: CockpitExperienceMode): string {
-  return m.replace(/_/g, ' ')
+/** Maps live cockpit signals to SKL camera preset (replaces the old multi-enum → camera map). */
+export function unifiedCockpitCameraPreset(i: CockpitExperienceInput): CameraMode {
+  const ph = i.movePlayback.phase
+  if (ph === 'charging' || ph === 'executing' || ph === 'cooldown') return 'move'
+  if (i.diagnosticSurfaceActive || i.presentation.semantic === 'DIAGNOSTIC') return 'diagnostic'
+  if (i.presentation.semantic === 'COMBAT_READY') return 'cinematic'
+  return 'pilot'
 }

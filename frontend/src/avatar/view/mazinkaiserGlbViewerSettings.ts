@@ -32,7 +32,7 @@ export const DEFAULT_GLB_VIEWER_SETTINGS: MazinkaiserGlbViewerSettings = {
   wireframe: false,
   /** Deck grid helps align orbit/pan on all displays; still toggled from hull gear strip. */
   showGrid: true,
-  /** ~0.03–0.05: smooth coast; higher values feel “stiff” when orbiting the hull. */
+  /** ~0.03–0.05: smooth coast; touch-primary viewports apply a slight extra scale in SKLModelViewer OrbitControls. */
   damping: 0.036,
   fov: 44,
 }

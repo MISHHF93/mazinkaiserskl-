@@ -60,6 +60,8 @@ async def voice_ingest(
             "normalized_len": len(ing.normalized_for_model or ""),
             "source": body.source,
             "execute_turn": body.execute_turn,
+            "hull_nlu_model": (ing.hull_voice_nlu or {}).get("model_id"),
+            "hull_actions": len((ing.hull_voice_nlu or {}).get("actions") or []),
         },
         session_id=sess.session_id,
     )
@@ -93,6 +95,8 @@ async def voice_ingest(
         tts_hints=hints,
         wake_routing=ing.wake_routing,
         chat=chat_resp,
+        hull_voice_nlp=ing.hull_voice_nlp or {},
+        hull_voice_nlu=ing.hull_voice_nlu or {},
     )
 
 

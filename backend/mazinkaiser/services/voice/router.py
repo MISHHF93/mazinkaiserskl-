@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from mazinkaiser.core.config import get_settings
 from mazinkaiser.services.cognitive.command_parser import ParsedCommand, parse_pilot_command
+from mazinkaiser.services.cognitive.hull_voice_models import run_hull_voice_nlp, run_hull_voice_nlu
 from mazinkaiser.services.cognitive.intent_classification import classify_intent
 from mazinkaiser.services.memory.session import SessionMemory
 from mazinkaiser.services.voice.normalization import normalize_voice_command
@@ -31,6 +33,8 @@ class VoiceIngressResult:
     parsed: ParsedCommand | None
     intent: str | None
     wake_routing: dict[str, Any]
+    hull_voice_nlp: dict[str, Any] | None = None
+    hull_voice_nlu: dict[str, Any] | None = None
 
 
 def resolve_stt_provider(provider_id: str):
@@ -68,6 +72,17 @@ class VoiceInteractionRouter:
             "wake_strip_enabled": memory.wake_strip_enabled,
             "prefix_hits": list(memory.wake_prefixes)[:32],
         }
+        hull_voice_nlp: dict[str, Any] | None = None
+        hull_voice_nlu: dict[str, Any] | None = None
+        if get_settings().voice_hull_voice_models_enabled:
+            hull_voice_nlp = run_hull_voice_nlp(
+                raw_transcript=raw_clean,
+                normalized_for_model=normalized,
+            )
+            hull_voice_nlu = run_hull_voice_nlu(
+                nlp_canonical=str(hull_voice_nlp.get("canonical_text") or ""),
+                parsed=parsed,
+            )
         return VoiceIngressResult(
             event=event,
             raw_transcript=raw_clean,
@@ -77,4 +92,6 @@ class VoiceInteractionRouter:
             parsed=parsed,
             intent=intent_val,
             wake_routing=wake_routing,
+            hull_voice_nlp=hull_voice_nlp,
+            hull_voice_nlu=hull_voice_nlu,
         )

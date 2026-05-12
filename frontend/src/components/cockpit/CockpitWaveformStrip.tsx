@@ -8,10 +8,10 @@ export function CockpitWaveformStrip({
   hot?: boolean
 }) {
   if (!active) return null
-  const n = 28
+  const n = 18
   return (
     <div
-      className={`pointer-events-none flex h-7 max-w-full items-end justify-center gap-[2px] px-1.5 ${
+      className={`pointer-events-none flex h-5 max-w-full items-end justify-center gap-px px-1 ${
         hot ? 'opacity-100' : 'opacity-80'
       }`}
       role="img"

@@ -8,15 +8,12 @@ export const SIM_SKL_ANGULAR_PANEL =
 export const SIM_HUD_BEZEL_PANEL =
   'relative rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_28%,transparent)] bg-[color-mix(in_srgb,#03050c_76%,transparent)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-plasma-ice)_12%,transparent),0_6px_28px_rgba(0,0,0,0.55)] backdrop-blur-xl before:pointer-events-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[color-mix(in_srgb,var(--color-mzk-plasma)_35%,transparent)] before:to-transparent'
 
-/** @deprecated Prefer {@link SIM_HUD_BEZEL_PANEL}; kept as alias for existing imports. */
-export const SIM_FLOAT_PANEL = SIM_HUD_BEZEL_PANEL
-
 /** Bottom-left deck grip — mirrors corner bezel language of {@link HudActuatorCluster}. */
 export function HudDeckGrip({ children, className = '', ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       {...rest}
-      className={`relative flex flex-col gap-0.5 rounded-bl-[3px] border-b-2 border-l-2 border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_42%,transparent)] border-r-0 border-t-0 bg-[color-mix(in_srgb,#020308_62%,transparent)] px-1.5 py-1 pl-2 shadow-[inset_-1px_-1px_0_color-mix(in_srgb,var(--color-mzk-plasma)_8%,transparent)] backdrop-blur-md ${className}`}
+      className={`relative flex flex-col gap-px rounded-bl-[3px] border-b-2 border-l-2 border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_42%,transparent)] border-r-0 border-t-0 bg-[color-mix(in_srgb,#020308_62%,transparent)] px-1 py-0.5 pl-1.5 shadow-[inset_-1px_-1px_0_color-mix(in_srgb,var(--color-mzk-plasma)_8%,transparent)] backdrop-blur-md sm:px-1.5 sm:py-1 sm:pl-2 ${className}`}
     >
       <span
         aria-hidden
@@ -73,19 +70,17 @@ export const SIM_HUD_SELECT =
   'min-h-[40px] w-full rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_28%,transparent)] bg-[color-mix(in_srgb,#05070c_92%,black)] px-2 py-1.5 font-mono text-[clamp(11px,2.6vw,13px)] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_95%,white)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.65)] outline-none ring-offset-2 ring-offset-[#03050c] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-mzk-plasma)_55%,white)] sm:min-h-[36px] pointer-coarse:min-h-11'
 
 /**
+ * Single unified top HUD — spans hull width (clear SKL dock bottom-right only). Vitals + uplink/tools.
+ */
+export const SIM_HUD_TOP_STATUS_STRIP =
+  'pointer-events-auto absolute z-[105] left-1 right-1 top-0.5 flex w-full min-w-0 max-w-none min-h-0 flex-nowrap items-center justify-between gap-1 overflow-x-auto overscroll-x-contain rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_18%,transparent)] bg-[color-mix(in_srgb,#03050c_58%,transparent)] px-1 py-px shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-plasma-ice)_8%,transparent),0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-md sm:left-1.5 sm:right-1.5 sm:top-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+
+/**
  * Anchors hull command deck bottom-left, reserving the bottom-right quadrant for the SKL
  * viewer icon rail (Fit / Gear / …) so controls do not overlap.
  */
 export const SIM_HULL_DECK_ANCHOR =
-  'pointer-events-auto absolute z-[105] bottom-[max(0.15rem,env(safe-area-inset-bottom))] left-1.5 right-[5.75rem] max-h-[min(28dvh,360px)] sm:left-2 sm:bottom-2 sm:right-[6.25rem] md:right-[6.5rem] flex flex-col justify-end'
-
-/** Top-right telemetry chips: stays inside viewport; clear of SKL dock on narrow widths. */
-export const SIM_HUD_METRICS_ANCHOR =
-  'absolute z-[105] top-1 right-1 flex max-w-[min(calc(100%-7.25rem),30rem)] flex-wrap justify-end gap-px px-0.5 pt-0.5 sm:top-2 sm:right-2'
-
-/** Full-width top status strip — vitals + context + console (gaming HUD zone A). */
-export const SIM_HUD_TOP_STATUS_STRIP =
-  'pointer-events-auto absolute z-[105] left-2 right-2 top-1 flex max-w-[min(calc(100vw-5.5rem),20rem)] flex-col gap-1 rounded-[3px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_20%,transparent)] bg-[color-mix(in_srgb,#03050c_62%,transparent)] px-1.5 py-1 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-plasma-ice)_8%,transparent),0_4px_20px_rgba(0,0,0,0.45)] backdrop-blur-md sm:left-auto sm:right-2 sm:top-2 sm:max-w-[22rem]'
+  'pointer-events-auto absolute z-[105] bottom-[max(0.1rem,env(safe-area-inset-bottom))] left-1 right-[5.35rem] max-h-[min(18dvh,260px)] sm:left-1.5 sm:bottom-1 sm:right-[5.85rem] md:right-[6.1rem] flex flex-col justify-end'
 
 /** Vertical rail button for tactical console (zone C). */
 export const SIM_CONSOLE_RAIL_BTN =

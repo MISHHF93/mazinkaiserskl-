@@ -28,7 +28,8 @@ import * as THREE from 'three'
 import { MOUSE, TOUCH } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import type { AvatarPresentation, SklMovePlaybackSnapshot } from '../presentation/types'
-import type { CockpitExperienceMode } from '../../components/cockpit/cockpitExperienceMode'
+import { unifiedCockpitCameraPreset } from '../../components/cockpit/cockpitExperienceMode'
+import { HULL_VOICE_VIEWPORT_EVENT } from '../../voice/applyHullVoiceNlu'
 import type { CameraMode } from '@mazinkaiser/shared-types'
 import { SklMoveAnimationPlayback } from './SklMoveAnimationPlayback'
 import { SklProceduralGreetingMotor } from './SklProceduralGreetingMotor'
@@ -628,20 +629,6 @@ const SKL_MOVE_PLAYBACK_IDLE: SklMovePlaybackSnapshot = {
 /** Aligns with `@mazinkaiser/shared-types` {@link CameraMode} — canonical camera presets for SKL hero framing. */
 export type SklViewCameraPresetId = CameraMode
 
-function experienceToCameraPreset(m: CockpitExperienceMode): SklViewCameraPresetId {
-  switch (m) {
-    case 'MOVE_DEMO':
-    case 'FINAL_COUNT':
-      return 'move'
-    case 'DIAGNOSTIC':
-      return 'diagnostic'
-    case 'COMBAT_READY':
-      return 'cinematic'
-    default:
-      return 'pilot'
-  }
-}
-
 function snapOrbitPolarToPreset(
   camera: THREE.PerspectiveCamera,
   controls: OrbitControlsImpl,
@@ -660,6 +647,28 @@ function snapOrbitPolarToPreset(
   camera.position.copy(controls.target).add(offset)
   camera.updateProjectionMatrix()
   controls.update()
+}
+
+/** Voice NLU dolly — must live inside Canvas to reach OrbitControls + PerspectiveCamera. */
+function SklHullVoiceDolly() {
+  const { camera } = useThree()
+  const controls = useThree((s) => s.controls) as OrbitControlsImpl | null
+  useEffect(() => {
+    const onVp = (e: Event) => {
+      const d = (e as CustomEvent<{ op?: string; factor?: number }>).detail
+      if (!d || d.op !== 'dolly' || typeof d.factor !== 'number') return
+      const ctrl = controls
+      if (!ctrl) return
+      const off = new THREE.Vector3().copy(camera.position).sub(ctrl.target)
+      off.multiplyScalar(d.factor)
+      camera.position.copy(ctrl.target).add(off)
+      camera.updateProjectionMatrix()
+      ctrl.update()
+    }
+    document.addEventListener(HULL_VOICE_VIEWPORT_EVENT, onVp)
+    return () => document.removeEventListener(HULL_VOICE_VIEWPORT_EVENT, onVp)
+  }, [camera, controls])
+  return null
 }
 
 type SklLoadedProps = {
@@ -720,8 +729,17 @@ function SklLoadedModel(props: SklLoadedProps) {
    * imperative updates in layout can be overwritten on the next render and zoom/orbit feels broken).
    */
   const [orbitDistanceLimits, setOrbitDistanceLimits] = useState({ min: 0.02, max: 8000 })
-  /** Phones / tablets: slightly faster orbit + pinch response (still clamped by min/max distance). */
-  const [coarsePointerOrbitMul, setCoarsePointerOrbitMul] = useState(1)
+  /**
+   * Pointer-aware orbit tuning: wheel zoom on desktop was calibrated separately from two-finger pinch.
+   * Touch-primary tablets use a higher pinch (zoom) gain but a *lower* one-finger rotate gain so the
+   * hull still coasts bee-like after release instead of snapping; damping is scaled slightly for the same glide.
+   */
+  const [pointerOrbitTuning, setPointerOrbitTuning] = useState<{
+    rotate: number
+    zoom: number
+    pan: number
+    dampingScale: number
+  }>(() => ({ rotate: 1, zoom: 1, pan: 1, dampingScale: 1 }))
 
   const lighting: SklLightingPresetId = autoRecovery ? 'DIAGNOSTIC' : ext.lightingPreset
   const surface: SklMaterialSurfaceId = autoRecovery ? 'clay' : ext.materialSurface
@@ -879,11 +897,26 @@ function SklLoadedModel(props: SklLoadedProps) {
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-    const mq = window.matchMedia('(pointer: coarse)')
-    const sync = () => setCoarsePointerOrbitMul(mq.matches ? 1.42 : 1)
+    const mqCoarse = window.matchMedia('(pointer: coarse)')
+    const mqNoHover = window.matchMedia('(hover: none)')
+    const sync = () => {
+      const coarse = mqCoarse.matches
+      const touchPrimary = coarse && mqNoHover.matches
+      if (touchPrimary) {
+        setPointerOrbitTuning({ rotate: 1.08, zoom: 1.96, pan: 1.3, dampingScale: 0.87 })
+      } else if (coarse) {
+        setPointerOrbitTuning({ rotate: 1.14, zoom: 1.58, pan: 1.32, dampingScale: 0.92 })
+      } else {
+        setPointerOrbitTuning({ rotate: 1, zoom: 1, pan: 1, dampingScale: 1 })
+      }
+    }
     sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
+    mqCoarse.addEventListener('change', sync)
+    mqNoHover.addEventListener('change', sync)
+    return () => {
+      mqCoarse.removeEventListener('change', sync)
+      mqNoHover.removeEventListener('change', sync)
+    }
   }, [])
 
   useEffect(() => {
@@ -919,7 +952,7 @@ function SklLoadedModel(props: SklLoadedProps) {
         touches={{ ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN }}
         enableRotate
         enableDamping
-        dampingFactor={settings.damping}
+        dampingFactor={settings.damping * pointerOrbitTuning.dampingScale}
         enablePan
         enableZoom
         /** Dollying scales toward cursor (wheel) or pinch midpoint (touch); see three.js OrbitControls. */
@@ -928,10 +961,10 @@ function SklLoadedModel(props: SklLoadedProps) {
         screenSpacePanning={false}
         minPolarAngle={0.01}
         maxPolarAngle={Math.PI - 0.01}
-        /** Calibrated for fluid orbit + easier re-aim: higher gains, damping lowered in viewer defaults. */
-        rotateSpeed={2.12 * coarsePointerOrbitMul}
-        zoomSpeed={2.52 * coarsePointerOrbitMul}
-        panSpeed={2.18 * coarsePointerOrbitMul}
+        /** Desktop vs touch split — see `pointerOrbitTuning` (pinch zoom stronger on tablets, orbit softer). */
+        rotateSpeed={2.12 * pointerOrbitTuning.rotate}
+        zoomSpeed={2.52 * pointerOrbitTuning.zoom}
+        panSpeed={2.18 * pointerOrbitTuning.pan}
         autoRotate={settings.autoRotate}
         autoRotateSpeed={settings.autoRotateSpeed}
         minDistance={orbitDistanceLimits.min}
@@ -939,6 +972,7 @@ function SklLoadedModel(props: SklLoadedProps) {
       />
       <SklCameraTelemetry onUpdate={onCamTelemetry} />
       <SklPointerRaycastOrbitFocus rootRef={rootRef} />
+      <SklHullVoiceDolly />
 
       {ibl.kind === 'preset' ? (
         <Environment preset={ibl.preset} environmentIntensity={ibl.sceneEnvironmentIntensity} />
@@ -1098,18 +1132,27 @@ export function SKLModelViewer(props: {
   onHullState?: (s: HullViewportState) => void
   forceError?: boolean
   movePlayback?: SklMovePlaybackSnapshot
-  cockpitExperienceMode?: CockpitExperienceMode
+  /** When the tactical console / diagnostic surface is open, bias auto camera toward diagnostic framing. */
+  diagnosticSurfaceActive?: boolean
 }) {
   const {
     presentation,
     onHullState,
     forceError,
     movePlayback = SKL_MOVE_PLAYBACK_IDLE,
-    cockpitExperienceMode,
+    diagnosticSurfaceActive = false,
   } = props
-  const experienceMode: CockpitExperienceMode = cockpitExperienceMode ?? 'PILOT_VIEW'
   const [cameraPresetUser, setCameraPresetUser] = useState<SklViewCameraPresetId | null>(null)
-  const effectiveCameraPreset = cameraPresetUser ?? experienceToCameraPreset(experienceMode)
+  const autoCameraPreset = useMemo(
+    () =>
+      unifiedCockpitCameraPreset({
+        presentation,
+        movePlayback,
+        diagnosticSurfaceActive,
+      }),
+    [presentation, movePlayback, diagnosticSurfaceActive],
+  )
+  const effectiveCameraPreset = cameraPresetUser ?? autoCameraPreset
   const res = useKaiserGlbModelResolution(forceError)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -1215,6 +1258,22 @@ export function SKLModelViewer(props: {
     setCameraPresetUser(null)
     queueMicrotask(() => fitRef.current?.())
   }, [])
+
+  useEffect(() => {
+    const onVp = (e: Event) => {
+      const d = (e as CustomEvent<{ op?: string; preset?: string }>).detail
+      if (!d?.op || d.op === 'dolly') return
+      if (d.op === 'reset_view') {
+        resetViewAndAutoCam()
+      } else if (d.op === 'fit') {
+        queueMicrotask(() => fitRef.current?.())
+      } else if (d.op === 'camera_preset' && d.preset) {
+        requestFitAndPreset(d.preset as SklViewCameraPresetId)
+      }
+    }
+    document.addEventListener(HULL_VOICE_VIEWPORT_EVENT, onVp)
+    return () => document.removeEventListener(HULL_VOICE_VIEWPORT_EVENT, onVp)
+  }, [resetViewAndAutoCam, requestFitAndPreset])
 
   const onFitBridgeReady = useCallback((fn: () => void) => {
     fitRef.current = fn
@@ -1477,6 +1536,8 @@ export function SKLModelViewer(props: {
                     <p className="border-t border-white/10 px-2 py-1.5 text-[clamp(10px,2.5vw,12px)] leading-relaxed text-white/82">
                       Drag on the hull (not the toolbar): <strong>left</strong> = orbit · <strong>right</strong> = pan ·{' '}
                       <strong>wheel</strong> = zoom to cursor · <strong>middle</strong> = dolly ·{' '}
+                      <strong>tablet / touch</strong>: one finger = soft damped orbit (bee-like glide); two fingers = pinch
+                      zoom + pan toward the pinch midpoint ·{' '}
                       <strong>double-click / double-tap</strong> = snap orbit pivot to the surface under the pointer so you
                       can “stand” anywhere on the mesh. <strong>Reset view</strong> = fit + camera preset.
                     </p>
@@ -1730,7 +1791,7 @@ export function SKLModelViewer(props: {
               <select
                 id="skl-dock-cam-preset"
                 className={`${SIM_HUD_SELECT} !min-h-[34px] max-w-[min(11rem,46vw)] !py-1 !text-[clamp(8px,2vw,10px)] !font-mono uppercase tracking-[0.06em] pointer-coarse:!min-h-11`}
-                value={cameraPresetUser ?? experienceToCameraPreset(experienceMode)}
+                value={cameraPresetUser ?? autoCameraPreset}
                 onChange={(e) => requestFitAndPreset(e.target.value as SklViewCameraPresetId)}
               >
                 <option value="cinematic">Cam · Cinematic</option>

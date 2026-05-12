@@ -14,6 +14,8 @@ export const voiceIngestResponseSchema = z.object({
   }),
   tts_hints: z.record(z.string(), z.unknown()),
   wake_routing: z.record(z.string(), z.unknown()),
+  hull_voice_nlp: z.record(z.string(), z.unknown()).optional(),
+  hull_voice_nlu: z.record(z.string(), z.unknown()).optional(),
 })
 
 export type VoiceIngestResponseWire = z.infer<typeof voiceIngestResponseSchema>
