@@ -45,3 +45,4 @@ Deliver a **software-first**, immersive cockpit experience: an intelligent mecha
 - Technical detail: **`docs/TECH_SPEC.md`**
 - Public HTTP: **`docs/API.md`**
 - Locked identity: **`docs/SYSTEM_CANON.md`**
+- **KPI weights and tiers:** **`docs/KPI_CATALOG_AND_WEIGHTS.md`**

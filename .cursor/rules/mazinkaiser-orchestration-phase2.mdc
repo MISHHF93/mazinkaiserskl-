@@ -7,6 +7,8 @@ alwaysApply: true
 
 Implementation work MUST follow **`docs/PROMPT_PIPELINE.md`** (master 10-prompt chain) and stay aligned with **`docs/SYSTEM_CANON.md`**, **`docs/ARCHITECTURE.md`**, and **`backend/STRUCTURE.md`**.
 
+When multiple specs or sessions disagree, reconcile using **`docs/ENGINEERING_SOURCE_OF_TRUTH.md`** (precedence + topic → code map) before changing behavior.
+
 **IMPORTANT:**
 
 - Update existing modules instead of rebuilding from scratch.

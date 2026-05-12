@@ -4,7 +4,7 @@ Immersive **software-only** AI mecha companion: conversational Kaiser Core, REST
 
 **This file is the single repository entry point.** Package-level blurbs that used to live only under `frontend/`, `backend/`, `tests/`, `infra/`, `scripts/`, and `assets/` are summarized below; those folders may still contain one-line pointers here.
 
-**Canon & planning:** [System canon](docs/SYSTEM_CANON.md) · [Architecture](docs/ARCHITECTURE.md) · [Business requirements](docs/BRD.md) · [Technical specification](docs/TECH_SPEC.md) · [Phase 2 orchestration chain](docs/PROMPT_PIPELINE.md) · [Deployment](docs/DEPLOYMENT.md) · [Cinematic avatar / tiers](docs/CINEMATIC_AVATAR.md) · [API surface](docs/API.md) · [Testing strategy](docs/TESTING.md) · [Configuration](docs/CONFIGURATION.md)
+**Canon & planning:** [System canon](docs/SYSTEM_CANON.md) · [Architecture](docs/ARCHITECTURE.md) · [**Doc index / collision guard**](docs/ENGINEERING_SOURCE_OF_TRUTH.md) · [**KPI catalog & weights**](docs/KPI_CATALOG_AND_WEIGHTS.md) · [Business requirements](docs/BRD.md) · [Technical specification](docs/TECH_SPEC.md) · [Phase 2 orchestration chain](docs/PROMPT_PIPELINE.md) · [Deployment](docs/DEPLOYMENT.md) · [Cinematic avatar / tiers](docs/CINEMATIC_AVATAR.md) · [API surface](docs/API.md) · [Testing strategy](docs/TESTING.md) · [Configuration](docs/CONFIGURATION.md)
 
 **Package maps:** [`backend/STRUCTURE.md`](backend/STRUCTURE.md)
 

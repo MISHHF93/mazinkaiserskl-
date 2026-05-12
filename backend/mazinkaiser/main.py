@@ -20,6 +20,7 @@ from mazinkaiser.api.routes import (
     pilot,
     pilder,
     safety_api,
+    skl,
     telemetry,
     voice,
     websocket,
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(memory_api.router, prefix=settings.api_prefix)
     app.include_router(audit_api.router, prefix=settings.api_prefix)
     app.include_router(safety_api.router, prefix=settings.api_prefix)
+    app.include_router(skl.router, prefix=settings.api_prefix)
     app.include_router(websocket.router)
 
     return app

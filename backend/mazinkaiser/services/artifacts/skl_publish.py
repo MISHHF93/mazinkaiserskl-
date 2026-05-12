@@ -12,6 +12,8 @@ from mazinkaiser.services.artifacts.paths import repo_root
 COVE_NAME = "mazinkaiser-move-artifacts.cove.json"
 INSPECT_NAME = "mazinkaiser_skl.glb.inspect.json"
 NODES_NAME = "mazinkaiser_skl.glb.nodes.json"
+# Repo-root GLB and browser ``/models/`` URL basename — must match ``frontend`` ``MAZINKAISER_SKL_GLB_PRIMARY_BASENAME``.
+PRIMARY_HULL_GLB_BASENAME = "mazinkaiser_skl.glb"
 
 # Canonical JSON trio fed into cockpit / resonance tooling (SPA `public/artifacts`).
 PUBLISH_JSON_FILENAMES: tuple[str, ...] = (COVE_NAME, INSPECT_NAME, NODES_NAME)

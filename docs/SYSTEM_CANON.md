@@ -1,6 +1,6 @@
 # Mazinkaiser AI — system canon (context lock)
 
-This document **locks** product identity, architecture direction, personality, UX, simulation, moves, safety, and engineering standards as **canonical**. All implementation work MUST stay consistent with this file and with `docs/PROMPT_PIPELINE.md` (**Phase 2 systems architect orchestration chain**), `docs/ARCHITECTURE.md`, and `docs/AI_GOVERNANCE.md`.
+This document **locks** product identity, architecture direction, personality, UX, simulation, moves, safety, and engineering standards as **canonical**. All implementation work MUST stay consistent with this file and with `docs/PROMPT_PIPELINE.md` (**Phase 2 systems architect orchestration chain**), `docs/ARCHITECTURE.md`, **`docs/ENGINEERING_SOURCE_OF_TRUTH.md`** (precedence when docs overlap), and `docs/AI_GOVERNANCE.md`.
 
 ## What Mazinkaiser AI is (and is not)
 

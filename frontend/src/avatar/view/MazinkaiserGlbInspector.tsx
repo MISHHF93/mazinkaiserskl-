@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CockpitPad } from '../../components/cockpit/cockpitControls'
 import { fetchKaiserGlbWithFallbacks, resolveKaiserGlbUrl } from '../constants'
 import { parseGlbBuffer } from '../glb/parseGlb'
-import { summarizeGltfJson } from '../glb/summarizeGltf'
-import type { GltfInspectSummary } from '../glb/summarizeGltf'
+import { formatGlbInspectSummaryPlainText, summarizeGltfJson, type GltfInspectSummary } from '../glb/summarizeGltf'
 
 type LoadPhase = 'idle' | 'fetching' | 'parsed' | 'error'
 
@@ -20,6 +20,44 @@ export function MazinkaiserGlbInspector(props: {
   const [summary, setSummary] = useState<GltfInspectSummary | null>(null)
   const [bytesIn, setBytesIn] = useState(0)
   const [jsonChunkPreview, setJsonChunkPreview] = useState<{ text: string; totalChars: number } | null>(null)
+  const [copyHint, setCopyHint] = useState<string | null>(null)
+
+  const copyPlainText = useCallback(async (text: string): Promise<boolean> => {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.setAttribute('readonly', '')
+        ta.style.position = 'fixed'
+        ta.style.left = '-9999px'
+        document.body.appendChild(ta)
+        ta.select()
+        const ok = document.execCommand('copy')
+        document.body.removeChild(ta)
+        return ok
+      } catch {
+        return false
+      }
+    }
+  }, [])
+
+  const onCopyFullReport = useCallback(async () => {
+    if (!summary) return
+    const body = formatGlbInspectSummaryPlainText(summary, bytesIn, jsonChunkPreview)
+    const ok = await copyPlainText(body)
+    setCopyHint(ok ? 'Copied report to clipboard.' : 'Copy failed — select text manually.')
+    window.setTimeout(() => setCopyHint(null), 3200)
+  }, [summary, bytesIn, jsonChunkPreview, copyPlainText])
+
+  const onCopyNodeTree = useCallback(async () => {
+    if (!summary) return
+    const ok = await copyPlainText(summary.nodeTree)
+    setCopyHint(ok ? 'Copied node tree.' : 'Copy failed.')
+    window.setTimeout(() => setCopyHint(null), 2800)
+  }, [summary, copyPlainText])
 
   useEffect(() => {
     if (forceError) {
@@ -127,6 +165,19 @@ export function MazinkaiserGlbInspector(props: {
           File <strong>{mb} MiB</strong> · glTF asset <strong>{summary.assetVersion ?? '?'}</strong>
           {summary.generator ? ` · ${summary.generator}` : null}
         </p>
+        <div className="pointer-events-auto mt-2 flex flex-wrap gap-1.5">
+          <CockpitPad className="!px-2 !py-1 text-[8px] pointer-coarse:min-h-9" onClick={() => void onCopyFullReport()}>
+            Copy report
+          </CockpitPad>
+          <CockpitPad className="!px-2 !py-1 text-[8px] pointer-coarse:min-h-9" onClick={() => void onCopyNodeTree()}>
+            Copy tree
+          </CockpitPad>
+        </div>
+        {copyHint ?
+          <p className="mt-1.5 font-mono text-[8px] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]">
+            {copyHint}
+          </p>
+        : null}
       </header>
 
       <dl className="grid shrink-0 grid-cols-2 gap-x-4 gap-y-1 font-mono text-[9px] sm:grid-cols-3">

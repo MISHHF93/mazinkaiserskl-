@@ -371,7 +371,6 @@ export default function App() {
 
   const cycleHullAnimationTest = useCallback(() => {
     const n = KAISER_MOVES.length
-    if (n === 0) return
     const idx = demoMoveCycleRef.current % n
     const move = KAISER_MOVES[idx]!
     demoMoveCycleRef.current = idx + 1

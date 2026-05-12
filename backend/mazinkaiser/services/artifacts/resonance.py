@@ -16,6 +16,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from mazinkaiser.core.config import Settings
 from mazinkaiser.services.artifacts import skl_publish
+from mazinkaiser.services.artifacts.kpi_resonance_gates import build_kpi_tier_d_gate_bundle
 from mazinkaiser.services.artifacts.artifact_actions import (
     canonical_action_ids_from_publish_cove,
     expand_action_template,
@@ -774,6 +775,14 @@ def merge_monitor_into_cove(
     else:
         mon["hull_topology"] = {"nodes_schema": "", "node_count": 0}
 
+    mon["kpi_tier_d"] = build_kpi_tier_d_gate_bundle(
+        cove_doc=base_cove,
+        mean_merged=mean,
+        heuristic_by_slug=report.heuristic_by_slug,
+        ml_by_slug=report.ml_by_slug,
+        model_meta=report.model_meta,
+    )
+
     out["monitor"] = mon
 
     return out
@@ -1359,6 +1368,10 @@ def write_monitored_publish_cove(
 
 
             "model": report.model_meta,
+
+
+
+            "kpi_tier_d": merged["monitor"]["kpi_tier_d"],
 
 
 

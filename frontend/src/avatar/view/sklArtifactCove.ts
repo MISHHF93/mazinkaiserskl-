@@ -35,6 +35,23 @@ export type SklPrimaryHullWire = {
   inspect_nodes_source_consistent?: boolean
 }
 
+/** Tier-D KPI gate bundle from backend ``build_kpi_tier_d_gate_bundle`` (``monitor.kpi_tier_d``). */
+export type SklKpiTierDWire = {
+  schema?: string
+  tier_d_star?: number
+  all_gates_passed?: boolean
+  canonical_primary_glb_basename?: string
+  primary_hull_basename?: string
+  hull_binding_matches_canonical?: boolean
+  gates?: Array<{
+    id: string
+    weight?: number
+    signal?: number
+    threshold?: number
+    passed?: boolean
+  }>
+}
+
 /** ``monitor`` block from ``mazinkaiser-artifacts.cove.monitor.json`` (SPA overlay). */
 export type SklResonanceMonitorWire = {
   schema?: string
@@ -44,6 +61,7 @@ export type SklResonanceMonitorWire = {
   model?: Record<string, unknown>
   identity?: Record<string, unknown>
   primary_hull?: SklPrimaryHullWire
+  kpi_tier_d?: SklKpiTierDWire
 }
 
 let lastBatches: SklArtifactBatchWire[] = []
@@ -134,6 +152,40 @@ function normalizeResonanceMonitor(mon: Record<string, unknown>): SklResonanceMo
       : 'ai-robot/publish-resonance-monitor/1'
   const generated_at = typeof mon.generated_at === 'string' ? mon.generated_at : ''
 
+  let kpi_tier_d: SklKpiTierDWire | undefined
+  const kRaw = mon.kpi_tier_d
+  if (typeof kRaw === 'object' && kRaw !== null && !Array.isArray(kRaw)) {
+    const kd = kRaw as Record<string, unknown>
+    const gatesRaw = kd.gates
+    const gates: SklKpiTierDWire['gates'] = []
+    if (Array.isArray(gatesRaw)) {
+      for (const g of gatesRaw) {
+        if (typeof g !== 'object' || g === null || Array.isArray(g)) continue
+        const o = g as Record<string, unknown>
+        const id = typeof o.id === 'string' ? o.id : ''
+        if (!id) continue
+        gates.push({
+          id,
+          weight: typeof o.weight === 'number' ? o.weight : undefined,
+          signal: typeof o.signal === 'number' ? o.signal : undefined,
+          threshold: typeof o.threshold === 'number' ? o.threshold : undefined,
+          passed: typeof o.passed === 'boolean' ? o.passed : undefined,
+        })
+      }
+    }
+    kpi_tier_d = {
+      schema: typeof kd.schema === 'string' ? kd.schema : undefined,
+      tier_d_star: typeof kd.tier_d_star === 'number' && Number.isFinite(kd.tier_d_star) ? kd.tier_d_star : undefined,
+      all_gates_passed: typeof kd.all_gates_passed === 'boolean' ? kd.all_gates_passed : undefined,
+      canonical_primary_glb_basename:
+        typeof kd.canonical_primary_glb_basename === 'string' ? kd.canonical_primary_glb_basename : undefined,
+      primary_hull_basename: typeof kd.primary_hull_basename === 'string' ? kd.primary_hull_basename : undefined,
+      hull_binding_matches_canonical:
+        typeof kd.hull_binding_matches_canonical === 'boolean' ? kd.hull_binding_matches_canonical : undefined,
+      gates: gates.length ? gates : undefined,
+    }
+  }
+
   return {
     schema,
     generated_at,
@@ -142,6 +194,7 @@ function normalizeResonanceMonitor(mon: Record<string, unknown>): SklResonanceMo
     model,
     identity,
     primary_hull,
+    kpi_tier_d,
   }
 }
 

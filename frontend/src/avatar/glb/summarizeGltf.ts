@@ -185,3 +185,59 @@ export function summarizeGltfJson(json: GltfJson, binByteLength: number): GltfIn
     warnings,
   }
 }
+
+/**
+ * Plain-text structural report (clipboard / export) — mirrors `MazinkaiserGlbInspector` body.
+ */
+export function formatGlbInspectSummaryPlainText(
+  summary: GltfInspectSummary,
+  bytesIn: number,
+  jsonPreview: { totalChars: number } | null,
+): string {
+  const mb = (bytesIn / (1024 * 1024)).toFixed(2)
+  const c = summary.counts
+  const ak = summary.accessorKinds
+  const lines: string[] = []
+  lines.push('GLB 2.0 · structural review', '')
+  lines.push(
+    `File ${mb} MiB · glTF asset ${summary.assetVersion ?? '?'}` +
+      (summary.generator ? ` · ${summary.generator}` : ''),
+    '',
+  )
+  lines.push(
+    `scenes ${c.scenes}`,
+    `nodes ${c.nodes}`,
+    `meshes ${c.meshes}`,
+    `materials ${c.materials}`,
+    `textures ${c.textures}`,
+    `images ${c.images}`,
+    `accessors ${c.accessors}`,
+    `bufferViews ${c.bufferViews}`,
+    `buffers ${c.buffers}`,
+    `skins ${c.skins}`,
+    `animations ${c.animations}`,
+    '',
+  )
+  lines.push(
+    `Accessors: sc ${ak.scalar} · v2 ${ak.vec2} · v3 ${ak.vec3} · v4 ${ak.vec4} · mat ${ak.mat}` +
+      (ak.other ? ` · other ${ak.other}` : ''),
+    '',
+  )
+  if (summary.extensionsUsed.length > 0) {
+    lines.push(`extensionsUsed: ${summary.extensionsUsed.join(', ')}`, '')
+  }
+  if (summary.extensionsRequired.length > 0) {
+    lines.push(`extensionsRequired: ${summary.extensionsRequired.join(', ')}`, '')
+  }
+  if (summary.warnings.length > 0) {
+    lines.push('Warnings:', ...summary.warnings.map((w) => `  • ${w}`), '')
+  }
+  if (summary.animationSummary.length > 0) {
+    lines.push('Animations:', ...summary.animationSummary.map((a) => `  • ${a}`), '')
+  }
+  lines.push('Default scene · node tree', summary.nodeTree, '')
+  lines.push(
+    `Embedded glTF JSON chunk preview (${jsonPreview ? `${jsonPreview.totalChars.toLocaleString()} chars` : '—'})`,
+  )
+  return lines.join('\n')
+}

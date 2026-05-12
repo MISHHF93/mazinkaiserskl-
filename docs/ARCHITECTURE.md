@@ -6,7 +6,7 @@
 |--------|--------|
 | **`frontend/`** | Vite + React + TypeScript cockpit; see **`frontend/README.md`**. |
 | **`backend/`** | Installable `mazinkaiser` package — FastAPI async, Pydantic settings, versioned REST under `/api/v1`, centralized exception handlers + **`RequestContextMiddleware`**, WebSocket route. |
-| **`docs/`** | Product + engineering truth: **BRD**, **TECH_SPEC**, API, testing, orchestration. |
+| **`docs/`** | Product + engineering truth: **BRD**, **TECH_SPEC**, API, testing, orchestration — **doc precedence + topic→code map:** **`docs/ENGINEERING_SOURCE_OF_TRUTH.md`**. |
 | **`infra/`**, **`scripts/`**, **`assets/`** | Compose, dev scripts, static assets. |
 | **`tests/`** | Top-level README for cross-cutting tests; default Python suite stays in **`backend/tests/`** (package-local). |
 

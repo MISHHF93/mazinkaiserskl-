@@ -1268,6 +1268,24 @@ export function SKLModelViewer(props: {
             GLB {resonanceOverlay.primary_hull?.primary_glb_basename ?? '—'} ↔ viewport{' '}
             {MAZINKAISER_SKL_GLB_PRIMARY_BASENAME}
           </div>
+          {resonanceOverlay.kpi_tier_d ?
+            <div className="mt-0.5 border-t border-white/10 pt-0.5 text-white/80">
+              KPI Tier-D D*{' '}
+              {typeof resonanceOverlay.kpi_tier_d.tier_d_star === 'number'
+                ? resonanceOverlay.kpi_tier_d.tier_d_star.toFixed(3)
+                : '—'}{' '}
+              · gates{' '}
+              {Array.isArray(resonanceOverlay.kpi_tier_d.gates) ?
+                `${resonanceOverlay.kpi_tier_d.gates.filter((g) => g.passed).length}/${resonanceOverlay.kpi_tier_d.gates.length}`
+              : '—'}{' '}
+              · hull↔canonical{' '}
+              {resonanceOverlay.kpi_tier_d.hull_binding_matches_canonical === true ?
+                'ok'
+              : resonanceOverlay.kpi_tier_d.hull_binding_matches_canonical === false ?
+                'mismatch'
+              : '—'}
+            </div>
+          : null}
         </div>
       ) : null}
 
@@ -1316,7 +1334,7 @@ export function SKLModelViewer(props: {
       <div
         className={`pointer-events-none absolute bottom-0 right-0 flex max-w-[calc(100vw-0.35rem)] flex-col items-end gap-1 pb-[max(0.15rem,env(safe-area-inset-bottom,0px))] pr-[max(0.15rem,env(safe-area-inset-right,0px))] pl-1 pt-1 sm:bottom-1.5 sm:right-1.5 sm:pb-1 sm:pr-1 md:bottom-2 md:right-2 ${SIM_SKL_VIEWER_DOCK_Z}`}
       >
-        <div className="pointer-events-auto flex w-auto flex-col items-end gap-1">
+        <div className="pointer-events-auto flex w-full max-w-[min(100vw,380px)] flex-col items-end gap-1">
           {hullDockExpanded && toolbarOpen ? (
             <div
               className={SIM_HUD_POPOVER_SHEET}
@@ -1624,30 +1642,32 @@ export function SKLModelViewer(props: {
           ) : null}
 
           {!hullDockExpanded ?
-            <div className="pointer-events-auto flex w-full max-w-[min(100vw,380px)] flex-col items-end gap-1">
-              <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
-                <label htmlFor="skl-dock-cam-preset" className="sr-only">
-                  Camera preset
-                </label>
-                <select
-                  id="skl-dock-cam-preset"
-                  className={`${SIM_HUD_SELECT} !min-h-[34px] max-w-[min(11rem,46vw)] !py-1 !text-[clamp(8px,2vw,10px)] !font-mono uppercase tracking-[0.06em] pointer-coarse:!min-h-11`}
-                  value={cameraPresetUser ?? experienceToCameraPreset(experienceMode)}
-                  onChange={(e) => requestFitAndPreset(e.target.value as SklViewCameraPresetId)}
-                >
-                  <option value="cinematic">Cam · Cinematic</option>
-                  <option value="diagnostic">Cam · Diagnostic</option>
-                  <option value="pilot">Cam · Pilot</option>
-                  <option value="move">Cam · Move</option>
-                </select>
-                <CockpitPad
-                  className="text-[clamp(8px,2vw,10px)] px-2 py-1 font-mono uppercase tracking-[0.08em] pointer-coarse:min-h-11"
-                  onClick={fullScreenToggle}
-                >
-                  Full
-                </CockpitPad>
-              </div>
-              <HudActuatorCluster className="gap-1 pr-2" onPointerDown={(e) => e.stopPropagation()}>
+            <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
+              <label htmlFor="skl-dock-cam-preset" className="sr-only">
+                Camera preset
+              </label>
+              <select
+                id="skl-dock-cam-preset"
+                className={`${SIM_HUD_SELECT} !min-h-[34px] max-w-[min(11rem,46vw)] !py-1 !text-[clamp(8px,2vw,10px)] !font-mono uppercase tracking-[0.06em] pointer-coarse:!min-h-11`}
+                value={cameraPresetUser ?? experienceToCameraPreset(experienceMode)}
+                onChange={(e) => requestFitAndPreset(e.target.value as SklViewCameraPresetId)}
+              >
+                <option value="cinematic">Cam · Cinematic</option>
+                <option value="diagnostic">Cam · Diagnostic</option>
+                <option value="pilot">Cam · Pilot</option>
+                <option value="move">Cam · Move</option>
+              </select>
+              <CockpitPad
+                className="text-[clamp(8px,2vw,10px)] px-2 py-1 font-mono uppercase tracking-[0.08em] pointer-coarse:min-h-11"
+                onClick={fullScreenToggle}
+              >
+                Full
+              </CockpitPad>
+            </div>
+          : null}
+
+          {!hullDockExpanded ?
+            <HudActuatorCluster className="gap-1 pr-2" onPointerDown={(e) => e.stopPropagation()}>
               <ViewerIconButton
                 className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Fit hull in view"
@@ -1657,14 +1677,37 @@ export function SKLModelViewer(props: {
               </ViewerIconButton>
               <ViewerIconButton
                 className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
+                label="Open model debug readout"
+                pressed={toolbarOpen && sklSettingsTab === 'debug'}
+                onClick={() => {
+                  if (toolbarOpen && sklSettingsTab === 'debug') {
+                    setToolbarOpen(false)
+                    return
+                  }
+                  setHullDockExpanded(true)
+                  setToolbarOpen(true)
+                  setSklSettingsTab('debug')
+                }}
+              >
+                <SvgDebug />
+              </ViewerIconButton>
+              <ViewerIconButton
+                className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
+                label="Reset viewer defaults"
+                onClick={resetViewerDefaults}
+              >
+                <SvgReset />
+              </ViewerIconButton>
+              <ViewerIconButton
+                className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Expand hull toolbar"
                 onClick={() => setHullDockExpanded(true)}
               >
                 <SvgGear />
               </ViewerIconButton>
             </HudActuatorCluster>
-            </div>
-          : <HudActuatorCluster className="gap-1 pr-2" onPointerDown={(e) => e.stopPropagation()}>
+          : (
+            <HudActuatorCluster className="gap-1 pr-2" onPointerDown={(e) => e.stopPropagation()}>
               <ViewerIconButton
                 className="!h-9 !w-9 !min-h-[36px] !min-w-[36px] sm:!h-10 sm:!w-10 sm:!min-h-[40px] sm:!min-w-[40px] [&_svg]:!h-[18px] [&_svg]:!w-[18px] sm:[&_svg]:!h-5 sm:[&_svg]:!w-5"
                 label="Collapse hull toolbar"
@@ -1721,7 +1764,7 @@ export function SKLModelViewer(props: {
                 <SvgExpand />
               </ViewerIconButton>
             </HudActuatorCluster>
-          }
+          )}
         </div>
       </div>
     </div>

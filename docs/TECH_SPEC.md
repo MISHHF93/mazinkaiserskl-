@@ -6,7 +6,7 @@
 |-----------|----------------|
 | **`frontend/`** | Vite + React + TypeScript + Tailwind + Framer Motion cockpit |
 | **`backend/`** | Installable **`mazinkaiser`** FastAPI package, `pip install -e ".[dev]"` |
-| **`docs/`** | Architecture, BRD, API, testing, orchestration, canon |
+| **`docs/`** | Architecture, BRD, API, testing, orchestration, canon — **start at [`ENGINEERING_SOURCE_OF_TRUTH.md`](ENGINEERING_SOURCE_OF_TRUTH.md)** when reconciling overlapping specs |
 | **`infra/`** | Docker Compose, deployment sketches |
 | **`scripts/`** | Dev helpers (`dev.ps1`, `dev.sh`, etc.) |
 | **`assets/`** | Static art / branding (optional LFS) |
@@ -53,5 +53,6 @@
 
 ## Evolution
 
+- **Doc precedence + topic → code map:** **`docs/ENGINEERING_SOURCE_OF_TRUTH.md`**
 - Phase 2 feature chain: **`docs/PROMPT_PIPELINE.md`**
 - Digital twin detail: **`docs/DIGITAL_TWIN.md`**

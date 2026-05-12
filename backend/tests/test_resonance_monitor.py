@@ -123,7 +123,7 @@ def test_emit_monitored_cove_appends_history(monkeypatch, tmp_path: Path) -> Non
     assert len(evt) == 1
     evt0 = json.loads(evt[0])
     assert evt0.get("event") == "resonance_write"
-
+    assert isinstance(evt0.get("kpi_tier_d"), dict)
     assert csv_p.is_file()
     with csv_p.open(encoding="utf-8", newline="") as fh:
         rdr = list(csv.DictReader(fh))
@@ -143,6 +143,12 @@ def test_emit_monitored_cove_appends_history(monkeypatch, tmp_path: Path) -> Non
 
     assert payload["monitor"].get("primary_hull", {}).get("hull_binding_mode") == "single_primary_glb_bundle"
 
+    kpi = payload["monitor"].get("kpi_tier_d")
+    assert isinstance(kpi, dict)
+    assert kpi.get("schema") == "mazinkaiser/kpi-tier-d-gates/1"
+    assert kpi.get("canonical_primary_glb_basename") == "mazinkaiser_skl.glb"
+    assert isinstance(kpi.get("gates"), list) and len(kpi["gates"]) == 7
+    _assert_monitor_tree_has_no_none(kpi, path="$.monitor.kpi_tier_d")
     mf = evt0.get("artifacts_publish_manifest") or {}
     assert mf.get("mazinkaiser-move-artifacts.cove.json") == "yes"
     assert mf.get("mazinkaiser_skl.glb.inspect.json") == "yes"
