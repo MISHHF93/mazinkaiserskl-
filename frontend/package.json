@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "sync:skl-glb": "node scripts/sync-mazinkaiser-skl-glb.mjs",
     "inspect:glb": "tsx scripts/glb-info.ts",
@@ -11,7 +14,7 @@
     "predev": "node scripts/sync-mazinkaiser-skl-glb.mjs",
     "prebuild": "node scripts/sync-mazinkaiser-skl-glb.mjs",
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node ./scripts/run-production-build.mjs",
     "lint": "eslint .",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});\"",
     "rebuild": "npm run clean && npm run build",
