@@ -3,9 +3,9 @@
  * Rolldown's platform binding is missing on Linux after `npm ci`, which breaks
  * Vite 8 production builds on Vercel.
  *
- * No-op on non-Linux. On Linux x64, if the glibc or musl binding package is
- * absent from both hoisted root and frontend trees, run a targeted install
- * into the frontend workspace (Vercel does not persist lockfile changes).
+ * No-op on non-Linux. On Linux x64, if the glibc or musl binding cannot be
+ * resolved from the frontend rolldown install, run a targeted install into the
+ * frontend workspace (Vercel does not persist lockfile changes).
  */
 const { spawnSync } = require('node:child_process')
 const fs = require('node:fs')
@@ -29,27 +29,48 @@ function isMusl() {
 const bindingDir = isMusl() ? 'binding-linux-x64-musl' : 'binding-linux-x64-gnu'
 const pkg = `@rolldown/${bindingDir}`
 
-function bindingInstalled() {
-  const candidates = [
-    path.join(ROOT, 'frontend', 'node_modules', '@rolldown', bindingDir, 'package.json'),
-    path.join(ROOT, 'node_modules', '@rolldown', bindingDir, 'package.json'),
+/**
+ * package.json alone is not enough: npm#4828 can leave a broken tree where the
+ * folder exists but require('@rolldown/binding-…') still fails from rolldown.
+ */
+function bindingResolvableFromRolldown() {
+  const rolldownPkgCandidates = [
+    path.join(ROOT, 'frontend', 'node_modules', 'rolldown', 'package.json'),
+    path.join(ROOT, 'node_modules', 'rolldown', 'package.json'),
   ]
-  return candidates.some((p) => {
+  const rolldownPkg = rolldownPkgCandidates.find((p) => {
     try {
       return fs.existsSync(p)
     } catch {
       return false
     }
   })
+  if (!rolldownPkg) return false
+  try {
+    const { createRequire } = require('node:module')
+    const req = createRequire(rolldownPkg)
+    req.resolve(pkg)
+    return true
+  } catch {
+    return false
+  }
 }
 
-if (bindingInstalled()) {
+if (bindingResolvableFromRolldown()) {
   process.exit(0)
 }
 
 const r = spawnSync(
   'npm',
-  ['install', `${pkg}@${ROLLDOWN_VERSION}`, '-w', 'frontend', '--no-fund', '--no-audit'],
+  [
+    'install',
+    `${pkg}@${ROLLDOWN_VERSION}`,
+    '-w',
+    'frontend',
+    '--no-save',
+    '--no-fund',
+    '--no-audit',
+  ],
   {
     cwd: ROOT,
     stdio: 'inherit',
