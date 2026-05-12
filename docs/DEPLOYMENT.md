@@ -37,3 +37,21 @@ Clients should reconnect with exponential backoff (**`websocketReconnectDelayMs`
 ## 5. CI template
 
 `.github/workflows/mazinkaiser-ci.yml` runs **ruff + pytest** on the backend and **eslint + vitest + build** on the frontend. Adjust branches and pinning to match your fork.
+
+## 6. Vercel (static frontend only)
+
+The repo root is an **npm workspaces** monorepo root (`frontend/` + `packages/*`). **`vercel.json`** pins:
+
+| Setting | Value |
+|---------|--------|
+| **Root Directory** | `.` (repository root — **not** `frontend/`) |
+| **Install Command** | `npm ci` |
+| **Build Command** | `npm run build` (or `npm run vercel-build`, same script) |
+| **Output Directory** | `frontend/dist` |
+| **Framework Preset** | Other / no framework auto-detection |
+| **Node.js** | **22.x** (matches root `package.json` `engines`; avoid forcing 24.x in Vercel if the project pins 22) |
+
+In the Vercel dashboard **Build & Development Settings**, either **turn off all “Override” toggles** so `vercel.json` wins, or set overrides **exactly** to the table above. Using **`npm install`** instead of **`npm ci`** can diverge from `package-lock.json` and has caused missing native addons (Rolldown / lightningcss) on Linux builders.
+
+If a previous deploy cached a bad `node_modules`, trigger a redeploy with **“Clear build cache”** once after fixing settings.
+
