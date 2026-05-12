@@ -11,8 +11,8 @@
     "inspect:glb": "tsx scripts/glb-info.ts",
     "inspect:glb:reverse": "tsx scripts/reverse-engineer-skl-glb.ts",
     "inspect:glb:nodes": "tsx scripts/glb-nodes.ts",
-    "predev": "node scripts/sync-mazinkaiser-skl-glb.mjs && node ../scripts/ensure-rolldown-linux-binding.cjs",
-    "prebuild": "node scripts/sync-mazinkaiser-skl-glb.mjs && node ../scripts/ensure-rolldown-linux-binding.cjs",
+    "predev": "node scripts/sync-mazinkaiser-skl-glb.mjs && node ../scripts/ensure-linux-native-modules.cjs",
+    "prebuild": "node scripts/sync-mazinkaiser-skl-glb.mjs && node ../scripts/ensure-linux-native-modules.cjs",
     "dev": "vite",
     "build": "node ./scripts/run-production-build.mjs",
     "lint": "eslint .",
@@ -34,7 +34,9 @@
   },
   "optionalDependencies": {
     "@rolldown/binding-linux-x64-gnu": "1.0.0-rc.18",
-    "@rolldown/binding-linux-x64-musl": "1.0.0-rc.18"
+    "@rolldown/binding-linux-x64-musl": "1.0.0-rc.18",
+    "lightningcss-linux-x64-gnu": "1.32.0",
+    "lightningcss-linux-x64-musl": "1.32.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
