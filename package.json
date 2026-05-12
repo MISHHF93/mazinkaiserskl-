@@ -18,6 +18,8 @@
     "rebuild": "npm --prefix frontend run rebuild",
     "lint": "npm --prefix frontend run lint",
     "test": "npm --prefix frontend run test",
+    "test:perf": "npm --prefix frontend run test:perf",
+    "test:backend": "cd backend && python -m pytest -q --tb=short",
     "preview": "npm --prefix frontend run preview",
     "sync:skl-glb": "npm --prefix frontend run sync:skl-glb",
     "inspect:glb": "npm --prefix frontend run inspect:glb"

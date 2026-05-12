@@ -20,6 +20,7 @@
     "rebuild": "npm run clean && npm run build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:perf": "vitest run --testNamePattern \"performance guards\"",
     "test:watch": "vitest"
   },
   "dependencies": {

@@ -7,7 +7,6 @@ type MoveLibraryPanelProps = {
   loadingTactical: boolean
   onLoadTactical: () => void
   onDemoMove: (move: string) => void
-  sessionReady: boolean
 }
 
 export function MoveLibraryPanel({
@@ -15,7 +14,6 @@ export function MoveLibraryPanel({
   loadingTactical,
   onLoadTactical,
   onDemoMove,
-  sessionReady,
 }: MoveLibraryPanelProps) {
   return (
     <CockpitPanel
@@ -37,7 +35,7 @@ export function MoveLibraryPanel({
       <div className="-m-4 max-h-[min(520px,calc(100vh-340px))] overflow-y-auto p-4">
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {KAISER_MOVES.map((m) => (
-            <CockpitSeqActuator key={m} disabled={!sessionReady} onClick={() => onDemoMove(m)} seqLabel="BUS">
+            <CockpitSeqActuator key={m} disabled={false} onClick={() => onDemoMove(m)} seqLabel="BUS">
               {m}
             </CockpitSeqActuator>
           ))}

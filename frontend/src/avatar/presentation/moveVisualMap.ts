@@ -15,6 +15,9 @@ const MAP: Record<string, MoveVisualKind> = {
   'kaiser-nova': 'nova',
   'scrander-boomerang': 'thruster',
   'mazin-field-simulation': 'field',
+  wave: 'field',
+  walk: 'thruster',
+  salute: 'neutral',
 }
 
 export function labelToSlug(label: string): string {

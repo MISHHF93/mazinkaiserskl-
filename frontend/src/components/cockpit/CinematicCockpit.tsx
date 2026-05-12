@@ -46,6 +46,7 @@ type CinematicCockpitProps = {
   tacticalLoading: boolean
   onLoadTactical: () => void
   onDemoMove: (move: string) => void
+  onMlDemoMove: (slug: string) => void
   /** Single control: cycle catalog moves and drive SKL via the same REST move-demo path as the bus. */
   onCycleHullAnimationTest: () => void
   /** Upcoming move label after the current cycle index (for button copy). */
@@ -322,6 +323,7 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
               tacticalLoading={props.tacticalLoading}
               onLoadTactical={props.onLoadTactical}
               onDemoMove={props.onDemoMove}
+              onMlDemoMove={props.onMlDemoMove}
               onCycleHullAnimationTest={props.onCycleHullAnimationTest}
               nextHullAnimationTestMove={props.nextHullAnimationTestMove}
               sessionId={props.sessionId}

@@ -1,12 +1,18 @@
 import type { FormEvent } from 'react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
+  buildCatalogSyntheticMoveBatch,
+  buildMlDemoMoveBatch,
+  findMlDemoPreset,
+  resolveDemoExecutingMs,
+} from './avatar/demo/syntheticSklMoveBatches'
+import {
   normalizeAnimationPlan,
   resolveAvatarPresentation,
   resolveMoveVisualKind,
   severitiesFromAnimationPlan,
 } from './avatar/presentation'
-import type { AvatarRuntimeCues, MoveVisualKind, SklMovePlaybackSnapshot } from './avatar/presentation/types'
+import type { AvatarRuntimeCues, SklMovePlaybackSnapshot } from './avatar/presentation/types'
 import { CinematicCockpit } from './components/cockpit/CinematicCockpit'
 import { useCockpitWs, type MoveBatchWire } from './hooks/useCockpitWs'
 import { useVoiceInteractionLayer } from './hooks/useVoiceInteractionLayer'
@@ -64,6 +70,43 @@ export default function App() {
     moveLayerRef.current = moveLayer
   }, [moveLayer])
 
+  const finalizeExecutingMoveBatch = useCallback(
+    (batch: MoveBatchWire, displayLabel: string) => {
+      const slug = typeof batch.move_id === 'string' ? batch.move_id : null
+      const planRaw = coerceMoveAnimationPlan(batch.animation_plan)
+      warnAcceptedEmptyAnimationPlan(batch.outcome, planRaw.length, 'SKL move_batch')
+      const refined = resolveMoveVisualKind({ backendMoveId: slug, label: displayLabel })
+      const normalizedPlan = normalizeAnimationPlan(planRaw)
+      const sev = severitiesFromAnimationPlan(planRaw)
+      setMoveLayer({
+        phase: 'executing',
+        label: displayLabel,
+        backendMoveId: slug,
+        visualHint: refined,
+        planSeverities: sev,
+        animationPlan: normalizedPlan,
+        executingStartedAtMs: performance.now(),
+      })
+      if (typeof batch.voice_line === 'string') setTranscript(batch.voice_line)
+
+      const schedule = (fn: () => void, ms: number) => {
+        const id = window.setTimeout(fn, ms)
+        moveTimersRef.current.push(id)
+      }
+      const execMs = resolveDemoExecutingMs(batch.outcome, refined, planRaw)
+      schedule(() => {
+        setMoveLayer((prev) => ({
+          ...prev,
+          phase: 'cooldown',
+        }))
+        schedule(() => {
+          setMoveLayer({ ...INITIAL_MOVE })
+        }, 420)
+      }, execMs)
+    },
+    [],
+  )
+
   const [hudRest, setHudRest] = useState<MechaHudState | null>(null)
   const [mode, setMode] = useState<PersonalityMode>('KAISER_CORE_MODE')
   const [input, setInput] = useState('')
@@ -92,43 +135,11 @@ export default function App() {
       if (phase === 'charging' || phase === 'executing') return
 
       const slug = typeof batch.move_id === 'string' ? batch.move_id : null
-      const planRaw = coerceMoveAnimationPlan(batch.animation_plan)
-      warnAcceptedEmptyAnimationPlan(batch.outcome, planRaw.length, 'WebSocket move_event')
       const labelHint = slug?.replace(/-/g, ' ') || 'Remote move'
       clearMoveTimers()
-
-      const hint = resolveMoveVisualKind({ backendMoveId: slug, label: labelHint })
-      const normalizedPlan = normalizeAnimationPlan(planRaw)
-      setMoveLayer({
-        phase: 'executing',
-        label: labelHint,
-        backendMoveId: slug,
-        visualHint: hint,
-        planSeverities: severitiesFromAnimationPlan(planRaw),
-        animationPlan: normalizedPlan,
-        executingStartedAtMs: performance.now(),
-      })
-
-      if (typeof batch.voice_line === 'string') setTranscript(batch.voice_line)
-
-      const schedule = (fn: () => void, ms: number) => {
-        const id = window.setTimeout(fn, ms)
-        moveTimersRef.current.push(id)
-      }
-
-      const refined = resolveMoveVisualKind({ backendMoveId: slug, label: labelHint })
-      const execMs = batch.outcome === 'refused' ? 980 : refined === 'nova' ? 3200 : 2700
-      schedule(() => {
-        setMoveLayer((prev) => ({
-          ...prev,
-          phase: 'cooldown',
-        }))
-        schedule(() => {
-          setMoveLayer({ ...INITIAL_MOVE })
-        }, 420)
-      }, execMs)
+      finalizeExecutingMoveBatch(batch, labelHint)
     },
-    [clearMoveTimers],
+    [clearMoveTimers, finalizeExecutingMoveBatch],
   )
 
   const wsHandlers = useMemo(() => ({ onInboundMoveBatch }), [onInboundMoveBatch])
@@ -297,7 +308,6 @@ export default function App() {
 
   const runMove = useCallback(
     (moveLabel: string) => {
-      if (!sessionId) return
       clearMoveTimers()
 
       const hint = resolveMoveVisualKind({ label: moveLabel })
@@ -318,46 +328,15 @@ export default function App() {
 
       schedule(() => {
         void (async () => {
+          if (!sessionId) {
+            finalizeExecutingMoveBatch(buildCatalogSyntheticMoveBatch(moveLabel), moveLabel)
+            return
+          }
           try {
             const res = await api.postMoveDemo(sessionId, moveLabel)
             setHudRest(res.state)
             ingestCinematicProfile(res.cinematic_scale_profile)
-
-            const batch = res.move_batch as MoveBatchWire
-            const slug = typeof batch.move_id === 'string' ? batch.move_id : null
-            const planRaw = coerceMoveAnimationPlan(batch.animation_plan)
-            warnAcceptedEmptyAnimationPlan(batch.outcome, planRaw.length, 'REST move-demo')
-            const refined: MoveVisualKind = resolveMoveVisualKind({
-              backendMoveId: slug,
-              label: moveLabel,
-            })
-            const sev = severitiesFromAnimationPlan(planRaw)
-            const normalizedPlan = normalizeAnimationPlan(planRaw)
-
-            setMoveLayer({
-              phase: 'executing',
-              label: moveLabel,
-              backendMoveId: slug,
-              visualHint: refined,
-              planSeverities: sev,
-              animationPlan: normalizedPlan,
-              executingStartedAtMs: performance.now(),
-            })
-
-            if (typeof batch.voice_line === 'string') setTranscript(batch.voice_line)
-
-            const execMs =
-              batch.outcome === 'refused' ? 980 : refined === 'nova' ? 3200 : 2700
-
-            schedule(() => {
-              setMoveLayer((prev) => ({
-                ...prev,
-                phase: 'cooldown',
-              }))
-              schedule(() => {
-                setMoveLayer({ ...INITIAL_MOVE })
-              }, 420)
-            }, execMs)
+            finalizeExecutingMoveBatch(res.move_batch as MoveBatchWire, moveLabel)
           } catch (e) {
             logOptionalApiFailure('move-demo', e)
             clearMoveTimers()
@@ -366,7 +345,34 @@ export default function App() {
         })()
       }, 400)
     },
-    [sessionId, clearMoveTimers, ingestCinematicProfile],
+    [sessionId, clearMoveTimers, ingestCinematicProfile, finalizeExecutingMoveBatch],
+  )
+
+  const runMlDemoMove = useCallback(
+    (slug: string) => {
+      const preset = findMlDemoPreset(slug)
+      if (!preset) return
+      clearMoveTimers()
+      const batch = buildMlDemoMoveBatch(preset)
+      const hint = resolveMoveVisualKind({ backendMoveId: preset.slug, label: preset.label })
+      setMoveLayer({
+        phase: 'charging',
+        label: preset.label,
+        backendMoveId: null,
+        visualHint: hint,
+        planSeverities: [],
+        animationPlan: [],
+        executingStartedAtMs: null,
+      })
+      const schedule = (fn: () => void, ms: number) => {
+        const id = window.setTimeout(fn, ms)
+        moveTimersRef.current.push(id)
+      }
+      schedule(() => {
+        finalizeExecutingMoveBatch(batch, preset.label)
+      }, 400)
+    },
+    [clearMoveTimers, finalizeExecutingMoveBatch],
   )
 
   const cycleHullAnimationTest = useCallback(() => {
@@ -510,6 +516,7 @@ export default function App() {
       tacticalLoading={tacticalLoading}
       onLoadTactical={() => void loadTactical()}
       onDemoMove={(m) => runMove(m)}
+      onMlDemoMove={runMlDemoMove}
       onCycleHullAnimationTest={cycleHullAnimationTest}
       nextHullAnimationTestMove={nextHullAnimationTestMove}
       commandInput={input}

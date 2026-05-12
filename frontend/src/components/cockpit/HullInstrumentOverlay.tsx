@@ -19,6 +19,7 @@ import {
   SIM_SKL_ANGULAR_PANEL,
 } from './cockpitControls'
 import { formatHudEnum } from './cockpitUtils'
+import { SKL_ML_DEMO_PRESETS } from '../../avatar/demo/syntheticSklMoveBatches'
 
 /** Props for instrumentation composited on the SKL hull surface (SIMULATION). */
 export type HullInstrumentOverlayProps = {
@@ -40,6 +41,7 @@ export type HullInstrumentOverlayProps = {
   tacticalLoading: boolean
   onLoadTactical: () => void
   onDemoMove: (move: string) => void
+  onMlDemoMove: (slug: string) => void
   onCycleHullAnimationTest: () => void
   nextHullAnimationTestMove: string
   sessionId: string | null
@@ -453,8 +455,8 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
                       <CockpitPad
                         tone="plasma"
                         type="button"
-                        disabled={!props.sessionId}
-                        title="Cycles catalog moves; drives 3D hull via backend move-demo."
+                        disabled={false}
+                        title="Cycles catalog moves — uses backend when linked, otherwise local synthetic plan."
                         onClick={props.onCycleHullAnimationTest}
                         className="mb-1.5 flex w-full flex-col items-stretch gap-0.5 py-2 text-left normal-case tracking-normal sm:py-1.5 pointer-coarse:min-h-11"
                       >
@@ -467,11 +469,33 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
                         {KAISER_MOVES.map((m) => (
                           <LabPad
                             key={m}
-                            disabled={!props.sessionId}
+                            disabled={false}
                             className="min-h-9 max-w-none truncate py-1.5 text-[9px] pointer-coarse:min-h-11"
                             onClick={() => props.onDemoMove(m)}
                           >
                             {m}
+                          </LabPad>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma)_10%,transparent)] pt-3">
+                      <p className="mb-1 font-mono text-[8px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_76%,white)]">
+                        ML hull lab · synthetic artifacts
+                      </p>
+                      <p className="mb-2 font-mono text-[8px] leading-snug text-[color-mix(in_srgb,var(--color-mzk-silver)_82%,transparent)]">
+                        Local-only move_batch (no uplink). Drives SKL mixer + resonance payloads like a stub policy.
+                      </p>
+                      <div className="grid grid-cols-3 gap-1">
+                        {SKL_ML_DEMO_PRESETS.map((p) => (
+                          <LabPad
+                            key={p.slug}
+                            disabled={false}
+                            title={p.voiceLine}
+                            className="min-h-9 max-w-none truncate py-1.5 text-[9px] pointer-coarse:min-h-11"
+                            onClick={() => props.onMlDemoMove(p.slug)}
+                          >
+                            {p.label}
                           </LabPad>
                         ))}
                       </div>
