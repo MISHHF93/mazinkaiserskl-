@@ -198,6 +198,7 @@ async def cockpit_ws(websocket: WebSocket) -> None:
                         "mode": str(engine.get_or_create(session_id).state.mode),
                         "intent": resp.intent,
                         "instinct": resp.instinct.model_dump(mode="json") if resp.instinct else None,
+                        "move_batch": resp.move_batch,
                     },
                 )
                 reply = resp.reply

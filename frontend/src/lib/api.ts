@@ -194,3 +194,33 @@ export async function putSessionConfig(
   if (!r.ok) throw new Error(`session put ${r.status}`)
   return r.json() as Promise<SessionConfig>
 }
+
+export type CockpitChatResponseWire = {
+  session_id: string
+  reply: string
+  safety: string
+  mode: string
+  intent?: string | null
+  move_batch?: Record<string, unknown> | null
+}
+
+/** REST cognitive chat (same handler as WebSocket `chat` when uplink is unavailable). */
+export async function postCockpitChat(
+  sessionId: string | null,
+  text: string,
+  mode?: string,
+  includeSessionContext = false,
+): Promise<CockpitChatResponseWire> {
+  const r = await fetch(`${prefix}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      text,
+      ...(mode ? { mode } : {}),
+      include_session_context: includeSessionContext,
+    }),
+  })
+  if (!r.ok) throw new Error(`chat ${r.status}`)
+  return r.json() as Promise<CockpitChatResponseWire>
+}

@@ -15,9 +15,13 @@ class VectorMemoryAdapterPort(Protocol):
 
 
 def null_vector_adapter_status() -> dict[str, str]:
+    from mazinkaiser.core.config import get_settings
+
+    mid = get_settings().openai_model
     return {
         "adapter": "null",
         "embedding_model": "none",
+        "unified_chat_model_id": mid,
         "status": "stub",
         "notes": "Implement VectorMemoryAdapterPort + persistence when episodic recall needs embeddings.",
     }

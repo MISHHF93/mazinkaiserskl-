@@ -1,6 +1,18 @@
 """Persona system prompt assembly."""
 
 from mazinkaiser.domain.modes import MODE_DESCRIPTIONS, PersonalityMode
+from mazinkaiser.services.cognitive.intent import PilotIntent
+
+
+def unified_pilot_reply_json_suffix() -> str:
+    """Append to the system prompt for single-call structured cockpit turns (one model completion)."""
+
+    lines = ", ".join(f'"{m.value}"' for m in PilotIntent)
+    return (
+        "## Unified pilot turn — respond with ONE JSON object only "
+        "(no prose before or after).\nKeys: `\"reply\"` (string shown to pilot) and "
+        f'`"pilot_intent"` (exactly one of: {lines}).'
+    )
 
 
 def build_system_prompt(mode: PersonalityMode, *, cognitive_addon: str | None = None) -> str:

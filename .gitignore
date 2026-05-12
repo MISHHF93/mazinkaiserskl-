@@ -13,6 +13,11 @@ logs/
 node_modules/
 frontend/dist/
 
+mazinkaiser-artifacts.cove.monitor.json
+mazinkaiser-artifacts-resonance.csv
+frontend/public/artifacts/mazinkaiser-artifacts.cove.monitor.json
+artifacts-monitor/resonance_history.jsonl
+
 # Python / tooling artifacts
 backend/build/
 

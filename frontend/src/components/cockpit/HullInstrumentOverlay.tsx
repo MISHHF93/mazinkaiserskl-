@@ -44,6 +44,8 @@ export type HullInstrumentOverlayProps = {
   tacticalLoading: boolean
   onLoadTactical: () => void
   onDemoMove: (move: string) => void
+  onCycleHullAnimationTest: () => void
+  nextHullAnimationTestMove: string
   sessionId: string | null
   commandInput: string
   setCommandInput: (v: string) => void
@@ -456,6 +458,23 @@ export function HullInstrumentOverlay(props: HullInstrumentOverlayProps) {
                   <p className="mt-2 font-mono text-[clamp(8px,1.85vw,10px)] uppercase tracking-[0.12em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_76%,white)]">
                     Sequence bus — demo moves
                   </p>
+                  <div className="mt-1.5">
+                    <CockpitPad
+                      tone="plasma"
+                      type="button"
+                      disabled={!props.sessionId}
+                      title="Runs the next Kaiser move through the backend (same path as individual pads) and drives the 3D hull mixer. Re-click to cycle the catalog."
+                      onClick={props.onCycleHullAnimationTest}
+                      className="flex w-full flex-col items-stretch gap-0.5 py-2 text-left normal-case tracking-normal sm:py-1.5 pointer-coarse:min-h-11"
+                    >
+                      <span className="text-[clamp(10px,2.3vw,11px)] font-semibold uppercase tracking-[0.12em]">
+                        Test 3D hull animation
+                      </span>
+                      <span className="text-[clamp(8px,1.85vw,9px)] font-mono uppercase tracking-[0.08em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_82%,transparent)]">
+                        Next: {props.nextHullAnimationTestMove}
+                      </span>
+                    </CockpitPad>
+                  </div>
                   <div className="mt-1 grid grid-cols-2 gap-[clamp(0.2rem,0.8vw,0.28rem)] min-[420px]:grid-cols-3">
                     {KAISER_MOVES.map((m) => (
                       <LabPad

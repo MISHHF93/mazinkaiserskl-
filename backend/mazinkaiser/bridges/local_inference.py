@@ -1,6 +1,6 @@
 """Local model inference adapter (stub).
 
-Swap `OpenAICompatibleClient` orchestration targets: Ollama, vLLM, llama.cpp server, etc.
+Use ``UnifiedInferenceHub`` for all OpenAI-compatible traffic; swap ``OPENAI_BASE_URL`` for Ollama, vLLM, llama.cpp server, etc.
 Keep safety governor BEFORE model invocation unchanged.
 """
 

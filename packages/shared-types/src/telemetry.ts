@@ -43,7 +43,6 @@ export type SKLTelemetryState = z.infer<typeof mechaHudStateSchema>
 
 export const mazinkaiserCinematicScaleProfileSchema = z.object({
   height_meters: z.number(),
-  weight_metric_tons: z.number(),
   shoulder_width_meters: z.number(),
   chest_width_meters: z.number(),
   arm_length_meters: z.number(),
@@ -56,6 +55,15 @@ export const mazinkaiserCinematicScaleProfileSchema = z.object({
   movement_profile: z.string(),
   reactor_class: z.string(),
   design_philosophy: z.string(),
+  /** Cylinder hull envelope (m) — see `mazinkaiser.domain.mecha_physics`. */
+  hull_envelope_radius_m: z.number(),
+  hull_envelope_stack_height_m: z.number(),
+  hull_envelope_volume_m3: z.number(),
+  mass_kg: z.number(),
+  /** SI metric tons (1000 kg). */
+  weight_metric_tons: z.number(),
+  weight_newtons: z.number(),
+  gravity_ms2: z.number(),
 })
 
 export type MazinkaiserCinematicScaleProfileWire = z.infer<typeof mazinkaiserCinematicScaleProfileSchema>

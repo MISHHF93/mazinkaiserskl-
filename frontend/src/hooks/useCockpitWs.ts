@@ -153,6 +153,19 @@ export function useCockpitWs(handlers?: CockpitWsHandlers) {
             setAssistDone(false)
             const tid = typeof (msg as WsInbound).trace_id === 'string' ? (msg as WsInbound).trace_id : undefined
             useCockpitTraceStore.getState().setFromAssistantFrame(tid, 'assistant')
+            const asst = msg as WsInbound
+            if (
+              asst.move_batch != null &&
+              typeof asst.move_batch === 'object' &&
+              Object.keys(asst.move_batch as object).length > 0
+            ) {
+              const mb =
+                parseMoveExecutionBatch(asst.move_batch as Record<string, unknown>) ??
+                (asst.move_batch as SKLMoveExecutionBatch)
+              const h = extractHudPayload(asst as unknown)
+              if (h) setHud(h)
+              handlersRef.current?.onInboundMoveBatch?.(mb)
+            }
           }
           if (msg.type === 'assistant_token' && typeof (msg as WsInbound).token === 'string') {
             setAssistantStream((prev) => prev + ((msg as WsInbound).token as string))
@@ -209,6 +222,24 @@ export function useCockpitWs(handlers?: CockpitWsHandlers) {
 
   const consumeAssistPlayback = useCallback(() => setAssistDone(false), [])
 
+  const ingestAssistantRestReply = useCallback(
+    (payload: { reply: string; move_batch?: unknown }) => {
+      setLastReply(payload.reply)
+      setAssistantStream('')
+      setAssistDone(true)
+      if (
+        payload.move_batch != null &&
+        typeof payload.move_batch === 'object' &&
+        Object.keys(payload.move_batch as object).length > 0
+      ) {
+        const raw = payload.move_batch as Record<string, unknown>
+        const mb = parseMoveExecutionBatch(raw) ?? (payload.move_batch as SKLMoveExecutionBatch)
+        handlersRef.current?.onInboundMoveBatch?.(mb)
+      }
+    },
+    [],
+  )
+
   const ingestCinematicProfile = useCallback((p: MazinkaiserCinematicScaleProfile | undefined) => {
     if (p && typeof p.height_meters === 'number') setCinematicScaleProfile(p)
   }, [])
@@ -228,6 +259,7 @@ export function useCockpitWs(handlers?: CockpitWsHandlers) {
     assistantStream,
     assistDone,
     consumeAssistPlayback,
+    ingestAssistantRestReply,
     sendChat,
     reconnect: connect,
     forceReconnect,

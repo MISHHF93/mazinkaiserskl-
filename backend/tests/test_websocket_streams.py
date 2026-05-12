@@ -20,7 +20,10 @@ def test_ws_cockpit_bootstrap_frames() -> None:
         assert "session_id" in welcome
         cs = welcome["cinematic_scale_profile"]
         assert cs["height_meters"] == 32.0
-        assert cs["weight_metric_tons"] == 280.0
+        assert cs["weight_metric_tons"] == pytest.approx(279.939, rel=0, abs=0.001)
+        assert cs["mass_kg"] == pytest.approx(279_938.77, rel=1e-5)
+        assert cs["weight_newtons"] == pytest.approx(2_745_261.52, rel=1e-6)
+        assert cs["gravity_ms2"] == 9.80665
 
         tele = ws.receive_json()
         assert tele["type"] == "telemetry"

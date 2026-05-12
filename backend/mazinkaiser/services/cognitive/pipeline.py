@@ -10,7 +10,9 @@ from dataclasses import dataclass
 
 
 
+from mazinkaiser.core.config import get_settings
 from mazinkaiser.domain.modes import PersonalityMode
+from mazinkaiser.services.artifacts import build_skl_artifact_addon
 
 from mazinkaiser.services.cognitive.command_parser import parse_pilot_command
 
@@ -52,7 +54,7 @@ class CognitiveTurnBundle:
 
     session_context: dict
 
-
+    skl_publish_digest: str
 
     def system_prompt_addon(self) -> str:
 
@@ -81,6 +83,13 @@ class CognitiveTurnBundle:
         if self.instinct.recommended_actions:
 
             lines.append("Instinct recommends: " + "; ".join(self.instinct.recommended_actions[:4]))
+
+        if self.skl_publish_digest.strip():
+
+            lines.append(
+                "SKL publish-artifact digest (hull authoring / playback mapping; simulator only):\n"
+                + self.skl_publish_digest.strip()
+            )
 
         lines.append(
 
@@ -144,6 +153,8 @@ def build_cognitive_turn_bundle(
 
     ctx = build_session_context_dict(sess, memory, mode=mode)
 
+    artifact_digest = build_skl_artifact_addon(get_settings())
+
 
 
     # Enrich tactical line with instinct reasoning (distinct from instinct one-liner)
@@ -164,6 +175,36 @@ def build_cognitive_turn_bundle(
 
         session_context=ctx,
 
+        skl_publish_digest=artifact_digest,
+
     )
 
 
+def build_pre_model_cognitive_addon(
+    *,
+    sess: CockpitSession,
+    memory: SessionMemory,
+    mode: PersonalityMode,
+    tactical_svc: TacticalSimulationService | None,
+) -> str:
+    """Briefing before a unified LLM turn — no heuristic intent line (model classifies in the same call)."""
+
+    tactical = tactical_summary_lines(sess.state, tactical_svc)
+    pilot = pilot_from_memory(memory)
+    snap = sess.twin_snapshot
+    twin_line = (
+        f"Twin core: tactical_band={snap.tactical_band} heat={snap.heat_pct:.0f}% sync={snap.sync_rate_pct:.0f}% "
+        f"movement_ready={snap.movement_ready} nova_read={snap.nova_readiness_pct:.0f}% "
+        f"overdrive_risk={snap.overdrive_risk_pct:.0f}%"
+    )
+    lines = [
+        f"Operational contact label: «{pilot.label()}».",
+        f"Tactical summary: {tactical}",
+        twin_line,
+    ]
+    if snap.last_move_name:
+        lines.append(f"Last simulated move cue: {snap.last_move_name}.")
+    lines.append(f"Cockpit personality mode anchor: {mode.value}.")
+    digest = build_skl_artifact_addon(get_settings())
+    core = "\n".join(lines)
+    return f"{core}\n\n{digest}".strip() if digest else core

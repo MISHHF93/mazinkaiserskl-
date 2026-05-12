@@ -32,6 +32,7 @@ import type { CockpitExperienceMode } from '../../components/cockpit/cockpitExpe
 import type { CameraMode } from '@mazinkaiser/shared-types'
 import { SklMoveAnimationPlayback } from './SklMoveAnimationPlayback'
 import {
+  MAZINKAISER_SKL_GLB_PRIMARY_BASENAME,
   MAZINKAISER_SKL_GLB_PUBLIC_URL,
   collectKaiserGlbAbsoluteUrlCandidates,
   collectKaiserGlbUrlCandidates,
@@ -66,7 +67,12 @@ import {
   ViewerIconButton,
 } from '../../components/cockpit/cockpitControls'
 import { SvgDebug, SvgDockCollapse, SvgExpand, SvgFit, SvgGear, SvgReset } from '../../components/cockpit/viewerToolbarIcons'
-import { fetchAndApplySklMoveArtifactsCove } from './sklArtifactCove'
+import {
+  fetchAndApplySklMoveArtifactsCove,
+  fetchAndApplySklResonanceMonitor,
+  getSklResonanceMonitor,
+  type SklResonanceMonitorWire,
+} from './sklArtifactCove'
 
 export type HullViewportState = 'checking' | 'absent' | 'ready'
 
@@ -1051,6 +1057,7 @@ export function SKLModelViewer(props: {
   const [gltfErr, setGltfErr] = useState<string | null>(null)
   const [autoRecovery, setAutoRecovery] = useState(false)
   const [glbProgress, setGlbProgress] = useState({ active: false, progress: 0, item: '' })
+  const [resonanceOverlay, setResonanceOverlay] = useState<SklResonanceMonitorWire | null>(null)
   const [camInfo, setCamInfo] = useState<{ distance: number; target: [number, number, number] }>({
     distance: 0,
     target: [0, 0, 0],
@@ -1058,10 +1065,36 @@ export function SKLModelViewer(props: {
   const fitRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    const url = import.meta.env.VITE_SKL_ARTIFACTS_URL
-    void fetchAndApplySklMoveArtifactsCove(
-      typeof url === 'string' && url.trim() !== '' ? url.trim() : undefined,
-    )
+    let cancelled = false
+    const run = async () => {
+      const coveUrl =
+        typeof import.meta.env.VITE_SKL_ARTIFACTS_URL === 'string' &&
+        import.meta.env.VITE_SKL_ARTIFACTS_URL.trim() !== ''
+          ? import.meta.env.VITE_SKL_ARTIFACTS_URL.trim()
+          : undefined
+      await fetchAndApplySklMoveArtifactsCove(coveUrl)
+      const monUrl =
+        typeof import.meta.env.VITE_SKL_RESONANCE_MONITOR_URL === 'string' &&
+        import.meta.env.VITE_SKL_RESONANCE_MONITOR_URL.trim() !== ''
+          ? import.meta.env.VITE_SKL_RESONANCE_MONITOR_URL.trim()
+          : undefined
+      await fetchAndApplySklResonanceMonitor(monUrl)
+      if (cancelled) return
+      setResonanceOverlay(getSklResonanceMonitor())
+      const m = getSklResonanceMonitor()
+      const bn = m?.primary_hull?.primary_glb_basename?.trim()
+      if (import.meta.env.DEV && bn) {
+        if (bn.toLowerCase() !== MAZINKAISER_SKL_GLB_PRIMARY_BASENAME.toLowerCase()) {
+          console.warn(
+            `[SKL] Resonance primary hull ${bn} does not match runtime GLB ${MAZINKAISER_SKL_GLB_PRIMARY_BASENAME}`,
+          )
+        }
+      }
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const onGlbProgress = useCallback((p: { active: boolean; progress: number; item: string }) => {
@@ -1215,6 +1248,26 @@ export function SKLModelViewer(props: {
       {autoRecovery ? (
         <div className="absolute inset-x-0 top-8 z-40 rounded border border-[color-mix(in_srgb,var(--color-mzk-warning-flare)_40%,transparent)] bg-black/80 px-2 py-1 font-mono text-[9px] text-[color-mix(in_srgb,var(--color-mzk-warning-flare)_90%,white)]">
           Visibility recovery: diagnostic lighting, clay material, bounds helper — verify sync and mesh.
+        </div>
+      ) : null}
+      {resonanceOverlay ? (
+        <div className="pointer-events-none absolute left-1 top-12 z-30 max-w-[min(100%,20rem)] rounded border border-white/15 bg-black/75 px-2 py-1 font-mono text-[9px] leading-snug text-white/88 shadow-md shadow-black/40">
+          <div className="font-semibold uppercase tracking-[0.14em] text-white/65">Hull · artifact resonance</div>
+          <div className="mt-0.5">
+            mean{' '}
+            {typeof resonanceOverlay.mean_resonance === 'number'
+              ? resonanceOverlay.mean_resonance.toFixed(4)
+              : '—'}{' '}
+            · mode{' '}
+            {typeof resonanceOverlay.model?.mode === 'string' ? resonanceOverlay.model.mode : '—'}
+          </div>
+          <div
+            className="truncate opacity-90"
+            title={resonanceOverlay.primary_hull?.primary_glb_basename ?? ''}
+          >
+            GLB {resonanceOverlay.primary_hull?.primary_glb_basename ?? '—'} ↔ viewport{' '}
+            {MAZINKAISER_SKL_GLB_PRIMARY_BASENAME}
+          </div>
         </div>
       ) : null}
 

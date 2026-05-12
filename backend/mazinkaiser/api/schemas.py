@@ -29,6 +29,7 @@ class ChatResponse(BaseModel):
     intent: str | None = None
     instinct: InstinctAssessment | None = None
     session_context: dict[str, Any] | None = None
+    move_batch: dict[str, Any] | None = None
 
 
 class ParsedCommandPublic(BaseModel):

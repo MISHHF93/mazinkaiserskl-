@@ -9,7 +9,6 @@ export type MazinkaiserCinematicScaleProfile = MazinkaiserCinematicScaleProfileW
 /** Fallback when WS/REST omits profile (offline or older backend). Matches `mazinkaiser.domain.cinematic_scale`. */
 export const MAZINKAISER_CINEMATIC_SCALE_FALLBACK: MazinkaiserCinematicScaleProfile = {
   height_meters: 32,
-  weight_metric_tons: 280,
   shoulder_width_meters: 14,
   chest_width_meters: 10,
   arm_length_meters: 13,
@@ -22,7 +21,14 @@ export const MAZINKAISER_CINEMATIC_SCALE_FALLBACK: MazinkaiserCinematicScaleProf
   movement_profile: 'Heavy Super Robot',
   reactor_class: 'Catastrophic Photon Reactor',
   design_philosophy:
-    'Cinematic scale: overwhelmingly massive, reactor-heavy armor and city-dominating presence — not strict OVA/SRW databook numbers.',
+    'Cinematic scale: overwhelmingly massive, reactor-heavy armor and city-dominating presence — not strict OVA/SRW databook numbers. Use for twin presentation, environment framing, cockpit scale, and future inertia / shockwave models.',
+  hull_envelope_radius_m: 5.6,
+  hull_envelope_stack_height_m: 20.48,
+  hull_envelope_volume_m3: 2017.696678227475,
+  mass_kg: 279938.76810646674,
+  weight_metric_tons: 279.939,
+  weight_newtons: 2745261.52,
+  gravity_ms2: 9.80665,
 }
 
 /** HUD twin snapshot — canonical shape: `@mazinkaiser/shared-types` `SKLTelemetryState`. */

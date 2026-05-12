@@ -14,7 +14,8 @@ import * as api from './lib/api'
 import { logOptionalApiFailure } from './lib/devLog'
 import { cancelBrowserSpeech, speakWithBrowser, subscribeBrowserSpeakingPoll } from './speech/browserTts'
 import { subscribeMazinkaiserVoicesReady } from './speech/kaiserVoice'
-import type { MechaHudState, PersonalityMode } from './types'
+import { KAISER_MOVES, type MechaHudState, type PersonalityMode } from './types'
+import { cockpitUplinkDisabled } from './config'
 import { normalizeWakeSnippet } from './voice/wakeArchitecture'
 
 function matchesWakePrefix(text: string, prefixes: string[]): boolean {
@@ -143,6 +144,7 @@ export default function App() {
     assistDone,
     consumeAssistPlayback,
     sendChat,
+    ingestAssistantRestReply,
   } = useCockpitWs(wsHandlers)
 
   const hud = streamHud ?? hudRest
@@ -189,9 +191,28 @@ export default function App() {
         setTranscript('Wake phrase required. Lead with “Kaiser,” (or disable strict wake).')
         return
       }
-      sendChat(trimmed, mode)
+
+      if (status === 'open' && !cockpitUplinkDisabled()) {
+        sendChat(trimmed, mode)
+        return
+      }
+
+      if (!sessionId) {
+        setTranscript('No session — enable cockpit uplink or wait for connection.')
+        return
+      }
+
+      void (async () => {
+        try {
+          const resp = await api.postCockpitChat(sessionId, trimmed, mode)
+          ingestAssistantRestReply({ reply: resp.reply, move_batch: resp.move_batch })
+        } catch (e) {
+          logOptionalApiFailure('REST cockpit chat', e)
+          setTranscript('Chat failed (REST). Check backend and session.')
+        }
+      })()
     },
-    [strictWake, wakePrefixes, sendChat, mode],
+    [strictWake, wakePrefixes, sendChat, mode, status, sessionId, ingestAssistantRestReply],
   )
 
   const voice = useVoiceInteractionLayer({
@@ -271,6 +292,9 @@ export default function App() {
     [sessionId, ingestCinematicProfile],
   )
 
+  const demoMoveCycleRef = useRef(0)
+  const [nextHullAnimationTestMove, setNextHullAnimationTestMove] = useState<string>(KAISER_MOVES[0]!)
+
   const runMove = useCallback(
     (moveLabel: string) => {
       if (!sessionId) return
@@ -344,6 +368,16 @@ export default function App() {
     },
     [sessionId, clearMoveTimers, ingestCinematicProfile],
   )
+
+  const cycleHullAnimationTest = useCallback(() => {
+    const n = KAISER_MOVES.length
+    if (n === 0) return
+    const idx = demoMoveCycleRef.current % n
+    const move = KAISER_MOVES[idx]!
+    demoMoveCycleRef.current = idx + 1
+    setNextHullAnimationTestMove(KAISER_MOVES[demoMoveCycleRef.current % n]!)
+    runMove(move)
+  }, [runMove])
 
   useEffect(() => () => clearMoveTimers(), [clearMoveTimers])
 
@@ -477,6 +511,8 @@ export default function App() {
       tacticalLoading={tacticalLoading}
       onLoadTactical={() => void loadTactical()}
       onDemoMove={(m) => runMove(m)}
+      onCycleHullAnimationTest={cycleHullAnimationTest}
+      nextHullAnimationTestMove={nextHullAnimationTestMove}
       commandInput={input}
       setCommandInput={setInput}
       transcript={transcript}

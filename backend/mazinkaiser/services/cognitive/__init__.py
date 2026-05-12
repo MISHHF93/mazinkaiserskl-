@@ -11,12 +11,9 @@ from mazinkaiser.services.cognitive.response_generation import (
 )
 from mazinkaiser.services.cognitive.session_context import build_session_context_dict
 from mazinkaiser.services.cognitive.tactical_reasoning import tactical_summary_lines
-from mazinkaiser.services.cognitive.turn_bridge import (
-    build_instinct_status,
-    execute_cognitive_chat_turn,
-    mecha_compact,
-    resolve_stored_intent,
-)
+
+# HTTP / realtime bridge imports `execute_cognitive_chat_turn` from `turn_bridge` directly —
+# omitting those here avoids import cycles (`turn_bridge` → `orchestrator` → `prompts` → cognitive).
 
 __all__ = [
     "PilotIntent",
@@ -29,10 +26,6 @@ __all__ = [
     "tactical_summary_lines",
     "CognitiveTurnBundle",
     "build_cognitive_turn_bundle",
-    "execute_cognitive_chat_turn",
-    "build_instinct_status",
-    "mecha_compact",
-    "resolve_stored_intent",
     "kaiser_quick_suggestion",
     "amplify_reply_tone_hint",
 ]

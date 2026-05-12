@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from mazinkaiser.main import create_app
@@ -59,6 +60,8 @@ def test_cockpit_state_includes_cinematic_scale_profile() -> None:
     body = r.json()
     prof = body["cinematic_scale_profile"]
     assert prof["height_meters"] == 32.0
-    assert prof["weight_metric_tons"] == 280.0
+    assert prof["weight_metric_tons"] == pytest.approx(279.939, rel=0, abs=0.001)
+    assert prof["hull_envelope_volume_m3"] > 2000.0
+    assert prof["mass_kg"] == pytest.approx(279_938.77, rel=1e-5)
     assert prof["scrander_wingspan_meters"] == 52.0
     assert "Cinematic scale" in prof["design_philosophy"]

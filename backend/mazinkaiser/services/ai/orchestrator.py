@@ -2,25 +2,21 @@
 
 from __future__ import annotations
 
-import structlog
-
+from mazinkaiser.core.config import Settings
 from mazinkaiser.core.request_trace import require_trace_id
 from mazinkaiser.domain.modes import PersonalityMode
-from mazinkaiser.services.ai.prompts import build_system_prompt
-from mazinkaiser.services.ai.provider import AIProviderError, OpenAICompatibleClient, build_stub_response
+from mazinkaiser.services.ai.prompts import build_system_prompt, unified_pilot_reply_json_suffix
 from mazinkaiser.services.audit.service import log_audit_event
 from mazinkaiser.services.command_preprocess import normalize_pilot_utterance
-from mazinkaiser.core.config import Settings
+from mazinkaiser.services.inference.hub import UnifiedInferenceHub
 from mazinkaiser.services.memory.session import SessionMemory
 from mazinkaiser.services.safety_governor import SafetyDecision, evaluate_user_message, refusal_summary_for_audit
 
-log = structlog.get_logger(__name__)
-
 
 class AIOrchestrator:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, *, inference_hub: UnifiedInferenceHub | None = None) -> None:
         self._settings = settings
-        self._client = OpenAICompatibleClient(settings)
+        self._hub = inference_hub if inference_hub is not None else UnifiedInferenceHub(settings)
 
     async def run_turn(
         self,
@@ -30,6 +26,7 @@ class AIOrchestrator:
         memory: SessionMemory,
         cognitive_addon: str | None = None,
         session_id: str | None = None,
+        unified_structured: bool = False,
     ) -> tuple[str, dict[str, object]]:
         raw = user_text
         normalized = normalize_pilot_utterance(raw, memory)
@@ -99,24 +96,38 @@ class AIOrchestrator:
 
         text_for_model = normalized
         memory.append_turn("user", text_for_model)
-        system = build_system_prompt(mode, cognitive_addon=cognitive_addon)
-        msgs: list[dict[str, str]] = [{"role": "system", "content": system}]
+        use_struct = unified_structured and self._settings.unified_structured_turn_enabled()
+        sys_body = build_system_prompt(mode, cognitive_addon=cognitive_addon)
+        if use_struct:
+            sys_body = f"{sys_body}\n\n{unified_pilot_reply_json_suffix()}"
+        msgs: list[dict[str, str]] = [{"role": "system", "content": sys_body}]
         for m in memory.to_llm_messages():
             if m.get("role") in ("user", "assistant"):
                 msgs.append({"role": m["role"], "content": m["content"]})
 
-        try:
-            if self._settings.openai_api_key:
-                reply = await self._client.complete_chat(msgs)
-                meta["provider"] = "openai_compatible"
+        raw_reply, llm_meta = await self._hub.complete_chat_turn(
+            messages=msgs,
+            mode_value=mode.value,
+            fallback_stub_text_preview=text_for_model,
+        )
+        meta.update(llm_meta)
+        reply = raw_reply
+        meta["structured_unified"] = False
+        if use_struct:
+            prov = meta.get("provider")
+            if prov != "openai_compatible":
+                meta["structured_parse_error"] = meta.get(
+                    "structured_parse_error",
+                    "unified_structured_requires_live_provider",
+                )
             else:
-                reply = build_stub_response(text_for_model, mode.value)
-                meta["provider"] = "local_stub"
-        except AIProviderError as e:
-            log.warning("ai_provider_error", error=str(e))
-            reply = build_stub_response(text_for_model, mode.value)
-            meta["provider"] = "fallback_stub"
-            meta["error"] = str(e)
+                vis, intent_raw, perr = UnifiedInferenceHub.parse_structured_pilot_turn(raw_reply)
+                meta["pilot_intent_raw"] = intent_raw
+                if perr:
+                    meta["structured_parse_error"] = perr
+                else:
+                    meta["structured_unified"] = True
+                    reply = vis
 
         memory.append_turn("assistant", reply)
 

@@ -29,7 +29,10 @@ dev = [
     "ruff>=0.8.0",
     "mypy>=1.13.0",
 ]
-
+ml = [
+    "numpy>=2.0.0",
+    "scikit-learn>=1.5.0",
+]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["mazinkaiser*"]
