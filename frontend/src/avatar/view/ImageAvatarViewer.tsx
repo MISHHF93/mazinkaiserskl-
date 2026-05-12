@@ -105,7 +105,7 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
       }`
 
   const hullInnerCrop = hullSurface ?
-    'absolute inset-px overflow-hidden rounded-[7px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_11%,transparent)]'
+    'absolute inset-0 overflow-hidden rounded-lg border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_10%,transparent)]'
     : 'absolute inset-[3px] overflow-hidden rounded-[1.2rem] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_16%,transparent)] sm:inset-[4px]'
 
   const twinColumnClass = hullSurface ?
@@ -120,7 +120,7 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
         <div className={hullInnerCrop}>
           <div className="relative z-[14] flex h-full w-full min-h-0 flex-col">
             <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-              <div className={sklViewportClass}>
+              <div className={`${sklViewportClass} relative`}>
                 <SKLModelViewer
                   key={`skl-view-${sklViewerMountKey}`}
                   presentation={p}
@@ -134,37 +134,83 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
                     {hudOverlay}
                   </div>
                 ) : null}
+                {hullSurface ?
+                  <>
+                    <button
+                      type="button"
+                      className={`pointer-events-auto absolute bottom-[max(6.5rem,20svh)] left-2 z-[36] rounded border px-2 py-1 font-mono text-[8px] uppercase tracking-[0.12em] shadow-md backdrop-blur-sm transition-colors sm:bottom-[max(5.75rem,18svh)] ${
+                        structureReportOpen ?
+                          'border-[color-mix(in_srgb,var(--color-mzk-plasma)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_24%,black)] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_94%,white)]'
+                        : 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_28%,transparent)] bg-black/65 text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_88%,var(--color-mzk-plasma-ice)_12%)] hover:bg-white/10'
+                      }`}
+                      aria-expanded={structureReportOpen}
+                      title="Toggle GLB node inspector (meshes, materials, clips)"
+                      onClick={() => setStructureReportOpen((v) => !v)}
+                    >
+                      {structureReportOpen ? '▼' : '▶'} Inspector
+                    </button>
+                    {structureReportOpen ?
+                      <div
+                        className="pointer-events-auto absolute inset-x-0 bottom-0 top-[8%] z-[38] flex flex-col border-t border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_22%,transparent)] bg-[color-mix(in_srgb,#03040c_94%,black)] shadow-[0_-12px_48px_rgba(0,0,0,0.75)] backdrop-blur-md"
+                        role="dialog"
+                        aria-modal
+                        aria-label="GLB structure inspector"
+                      >
+                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color-mix(in_srgb,var(--color-mzk-plasma)_12%,transparent)] px-2 py-1.5">
+                          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]">
+                            GLB inspector
+                          </span>
+                          <button
+                            type="button"
+                            className="rounded border border-white/20 px-2 py-0.5 font-mono text-[9px] uppercase text-white/90 hover:bg-white/10"
+                            onClick={() => setStructureReportOpen(false)}
+                          >
+                            Close
+                          </button>
+                        </div>
+                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[color-mix(in_srgb,black_78%,transparent)]">
+                          <MazinkaiserGlbInspector
+                            key={`glb-inspect-${sklViewerMountKey}`}
+                            forceError={fixtureForceAbsent}
+                            onStatus={onInspectorStatus}
+                          />
+                        </div>
+                      </div>
+                    : null}
+                  </>
+                : null}
               </div>
-              <div
-                className={`relative shrink-0 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_14%,transparent)] bg-[color-mix(in_srgb,black_50%,transparent)] px-1.5 py-1 ${
-                  hullSurface ? 'z-[30]' : 'z-[16]'
-                }`}
-              >
-                <button
-                  type="button"
-                  className={`rounded-md px-2 py-1 font-mono text-[9px] uppercase tracking-[0.16em] transition-colors ${
-                    structureReportOpen ?
-                      'bg-[color-mix(in_srgb,var(--color-mzk-plasma)_22%,black)] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_92%,white)]'
-                    : 'text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,var(--color-mzk-plasma-ice)_15%)] hover:bg-white/5'
-                  }`}
-                  aria-expanded={structureReportOpen}
-                  onClick={() => setStructureReportOpen((v) => !v)}
-                >
-                  {structureReportOpen ? '▼' : '▶'} GLB structure (inspector)
-                </button>
-              </div>
-              {structureReportOpen ?
-                <div
-                  className={`relative max-h-[min(30vh,380px)] min-h-[120px] shrink-0 overflow-y-auto border-t border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_12%,transparent)] bg-[color-mix(in_srgb,black_72%,transparent)] ${
-                    hullSurface ? 'z-[34]' : 'z-[16]'
-                  }`}
-                >
-                  <MazinkaiserGlbInspector
-                    key={`glb-inspect-${sklViewerMountKey}`}
-                    forceError={fixtureForceAbsent}
-                    onStatus={onInspectorStatus}
-                  />
-                </div>
+              {!hullSurface ?
+                <>
+                  <div
+                    className={`relative shrink-0 border-t border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_14%,transparent)] bg-[color-mix(in_srgb,black_50%,transparent)] px-1 py-0.5 z-[16]`}
+                  >
+                    <button
+                      type="button"
+                      className={`rounded px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.14em] transition-colors ${
+                        structureReportOpen ?
+                          'bg-[color-mix(in_srgb,var(--color-mzk-plasma)_22%,black)] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_92%,white)]'
+                        : 'text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_75%,var(--color-mzk-plasma-ice)_15%)] hover:bg-white/5'
+                      }`}
+                      aria-expanded={structureReportOpen}
+                      title="Toggle GLB node inspector (meshes, materials, clips)"
+                      onClick={() => setStructureReportOpen((v) => !v)}
+                    >
+                      {structureReportOpen ? '▼' : '▶'} Inspector
+                    </button>
+                  </div>
+                  {structureReportOpen ?
+                    <div
+                      className="relative max-h-[min(30vh,380px)] min-h-[120px] shrink-0 overflow-y-auto border-t border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_12%,transparent)] bg-[color-mix(in_srgb,black_72%,transparent)] z-[16]"
+                    >
+                      <MazinkaiserGlbInspector
+                        key={`glb-inspect-${sklViewerMountKey}`}
+                        forceError={fixtureForceAbsent}
+                        onStatus={onInspectorStatus}
+                      />
+                    </div>
+                  : null}
+                </>
               : null}
             </div>
           </div>
@@ -208,7 +254,7 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
   if (hullSurface) {
     return (
       <div
-        className="flex min-h-0 w-full flex-1 flex-col"
+        className="flex h-full min-h-0 w-full flex-1 flex-col"
         data-semantic={p.semantic}
         data-move-visual={p.moveVisual}
         data-cinematic-move={p.cinematicMove ? '1' : '0'}

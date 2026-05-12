@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 from mazinkaiser.core.config import Settings
@@ -51,10 +52,19 @@ def _monitor_resonance_line(settings: Settings) -> str:
         if not isinstance(mon, dict):
             return ""
         mr = mon.get("mean_resonance")
+        try:
+            mr_f = float(mr) if mr is not None else 0.0
+        except (TypeError, ValueError):
+            mr_f = 0.0
+        mr_s = f"{mr_f:.4f}" if math.isfinite(mr_f) else "0.0000"
         md = mon.get("model")
-        mode = md.get("mode") if isinstance(md, dict) else "?"
-        ts = mon.get("generated_at", "?")
-        return f"[SKL resonance monitor @ {ts}] mean={mr!s} scorer={mode!s}."
+        mode = "unknown"
+        if isinstance(md, dict):
+            raw_mode = md.get("mode")
+            mode = str(raw_mode) if raw_mode is not None and str(raw_mode).strip() != "" else "unknown"
+        ts = mon.get("generated_at")
+        ts_s = str(ts) if ts is not None and str(ts).strip() != "" else "unknown_ts"
+        return f"[SKL resonance monitor @ {ts_s}] mean={mr_s} scorer={mode}."
     except (OSError, json.JSONDecodeError, TypeError):
         return ""
 

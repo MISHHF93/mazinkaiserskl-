@@ -177,43 +177,43 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
         className="animate-mzk-tactical-scan pointer-events-none fixed left-0 top-0 z-0 h-[12vh] w-full bg-gradient-to-b from-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_12%,transparent)] to-transparent opacity-[0.34]"
       />
 
-      <header className="relative z-[1] border-b border-[color-mix(in_srgb,var(--color-mzk-skull-bone)_18%,var(--color-mzk-plasma)_14%)] bg-[color-mix(in_srgb,var(--color-mzk-gunmetal)_96%,black)] px-[clamp(0.35rem,1.4vw,0.75rem)] py-[clamp(0.15rem,0.55vw,0.32rem)] shadow-[inset_0_-1px_0_color-mix(in_srgb,var(--color-mzk-inferno-yellow)_18%,transparent)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[min(2560px,calc(100%-0.35rem))] flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          <div className="min-w-0 flex-1 basis-[min(100%,320px)]">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-2.5">
-              <p className="font-mono text-[clamp(6px,1.8vw,9px)] uppercase tracking-[0.22em] text-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_88%,var(--color-mzk-blood-energy)_12%)]">
-                MAZINKAISER SKL
-              </p>
-              <span
-                className={`rounded-[2px] border px-1.5 py-0.5 font-mono text-[clamp(7px,1.9vw,9px)] uppercase tracking-[0.14em] ${
-                  cockpitExperienceMode === 'MOVE_DEMO' || cockpitExperienceMode === 'FINAL_COUNT'
-                    ? 'border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_18%,black)] text-[var(--color-mzk-inferno-yellow)]'
-                  : cockpitExperienceMode === 'COMBAT_READY'
-                    ? 'border-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_45%,transparent)] bg-black/70 text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_92%,white)]'
-                  : cockpitExperienceMode === 'DIAGNOSTIC'
-                    ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_40%,transparent)] bg-black/75 text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]'
-                  : 'border-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_42%,transparent)] bg-black/65 text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_92%,transparent)]'
-                }`}
-                title="Cockpit experience mode"
-              >
-                {cockpitExperienceLabel(cockpitExperienceMode)}
-              </span>
-            </div>
-            <h1 className="font-[family-name:var(--font-display)] mt-0.5 max-w-[min(100%,36rem)] truncate text-[clamp(0.78rem,2.4vw,1.35rem)] font-extrabold tracking-tight text-[var(--color-mzk-skull-bone)] [text-shadow:0_0_14px_color-mix(in_srgb,var(--color-mzk-blood-energy)_25%,transparent),0_0_3px_black]">
+      <header className="pointer-events-none absolute left-0 right-0 top-0 z-[130] flex justify-center px-2 pt-[max(0.2rem,env(safe-area-inset-top))]">
+        <div className="pointer-events-auto flex w-full max-w-[min(100%,56rem)] flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-b-md border border-t-0 border-[color-mix(in_srgb,var(--color-mzk-skull-bone)_22%,var(--color-mzk-plasma)_12%)] bg-[color-mix(in_srgb,var(--color-mzk-gunmetal)_72%,black)] px-2 py-1 shadow-[0_10px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
+          <div className="min-w-0 flex flex-1 items-center gap-x-2 gap-y-0.5">
+            <p className="shrink-0 font-mono text-[7px] uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_82%,var(--color-mzk-blood-energy)_12%)] sm:text-[8px]">
+              SKL
+            </p>
+            <span
+              className={`shrink-0 rounded-[2px] border px-1.5 py-0.5 font-mono text-[7px] uppercase tracking-[0.1em] sm:text-[8px] ${
+                cockpitExperienceMode === 'MOVE_DEMO' || cockpitExperienceMode === 'FINAL_COUNT'
+                  ? 'border-[color-mix(in_srgb,var(--color-mzk-blood-energy)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-blood-energy)_18%,black)] text-[var(--color-mzk-inferno-yellow)]'
+                : cockpitExperienceMode === 'COMBAT_READY'
+                  ? 'border-[color-mix(in_srgb,var(--color-mzk-inferno-yellow)_45%,transparent)] bg-black/70 text-[color-mix(in_srgb,var(--color-mzk-skull-bone)_92%,white)]'
+                : cockpitExperienceMode === 'DIAGNOSTIC'
+                  ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_40%,transparent)] bg-black/75 text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)]'
+                : 'border-[color-mix(in_srgb,var(--color-mzk-smoke-panel)_42%,transparent)] bg-black/65 text-[color-mix(in_srgb,var(--color-mzk-silver-dim)_92%,transparent)]'
+              }`}
+              title="Cockpit experience mode"
+            >
+              {cockpitExperienceLabel(cockpitExperienceMode)}
+            </span>
+            <h1 className="min-w-0 truncate font-[family-name:var(--font-display)] text-[clamp(0.68rem,2.2vw,1rem)] font-extrabold tracking-tight text-[var(--color-mzk-skull-bone)] [text-shadow:0_0_12px_color-mix(in_srgb,var(--color-mzk-blood-energy)_22%,transparent),0_0_2px_black]">
               Kaiser Core
             </h1>
           </div>
 
-          <div className="flex max-w-full flex-shrink-0 flex-wrap items-center justify-end gap-[clamp(0.35rem,1.5vw,0.6rem)] text-[clamp(9px,2.4vw,11px)]">
+          <div className="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1 text-[clamp(8px,2.1vw,10px)]">
             <button
               type="button"
               onClick={() => setControlsHelpOpen(true)}
-              className="rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_38%,transparent)] bg-[color-mix(in_srgb,black_72%,transparent)] px-2 py-1 font-mono uppercase tracking-[0.08em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_88%,white)] hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_12%,black)] hover:text-[var(--color-mzk-reactor-white)] sm:px-2.5 sm:py-1.5"
+              className="rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_38%,transparent)] bg-black/55 px-1.5 py-0.5 font-mono uppercase tracking-[0.08em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_90%,white)] hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_14%,black)] sm:px-2 sm:py-1"
+              title="HUD map"
+              aria-label="Open HUD map"
             >
-              Where are controls?
+              Help
             </button>
             <span
-              className={`rounded-[2px] border px-2 py-1 font-mono uppercase tracking-[0.1em] sm:px-2.5 sm:py-1.5 sm:tracking-[0.12em] ${
+              className={`rounded-[2px] border px-1.5 py-0.5 font-mono uppercase tracking-[0.1em] sm:px-2 sm:py-1 ${
                 props.wsStatus === 'open'
                   ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_14%,transparent)] text-[var(--color-mzk-reactor-white)]'
                   : props.wsStatus === 'preview'
@@ -221,24 +221,24 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
                   : 'border-[color-mix(in_srgb,var(--color-mzk-warning-flare)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-warning-orange)_16%,transparent)] text-[color-mix(in_srgb,var(--color-mzk-reactor-white)_95%,var(--color-mzk-warning-flare))]'
               }`}
             >
-              UPLINK ·{' '}
-              {props.wsStatus === 'preview' ?
-                'local'
-              : props.wsStatus}
+              {props.wsStatus === 'preview' ? 'LOCAL' : props.wsStatus === 'open' ? 'LINK' : props.wsStatus}
             </span>
-            <span className="rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-silver)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-black)_88%,transparent)] px-2 py-1 font-mono text-[color-mix(in_srgb,var(--color-mzk-silver-bright)_88%,transparent)] sm:px-2.5 sm:py-1.5">
-              SESSION {props.sessionId ? `${props.sessionId.slice(0, 8)}…` : '—'}
+            <span
+              className="hidden max-w-[5.5rem] truncate rounded-[2px] border border-[color-mix(in_srgb,var(--color-mzk-silver)_45%,transparent)] bg-black/60 px-1.5 py-0.5 font-mono text-[color-mix(in_srgb,var(--color-mzk-silver-bright)_88%,transparent)] sm:inline sm:max-w-[7rem] sm:px-2 sm:py-1"
+              title={props.sessionId ?? undefined}
+            >
+              {props.sessionId ? props.sessionId.slice(0, 8) : '—'}
             </span>
             <button
               type="button"
               onClick={props.toggleTts}
-              className={`rounded-[2px] border px-2 py-1 font-mono uppercase tracking-[0.08em] sm:px-2.5 sm:py-1.5 sm:tracking-[0.1em] md:tracking-[0.12em] ${
+              className={`rounded-[2px] border px-1.5 py-0.5 font-mono uppercase tracking-[0.08em] sm:px-2 sm:py-1 ${
                 props.ttsOn
                   ? 'border-[color-mix(in_srgb,var(--color-mzk-plasma-violet)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_14%,transparent)] text-[var(--color-mzk-reactor-white)] hover:bg-[color-mix(in_srgb,var(--color-mzk-plasma)_26%,transparent)]'
                   : 'border-[color-mix(in_srgb,var(--color-mzk-silver-dim)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-black-plate)_90%,transparent)] text-[color-mix(in_srgb,var(--color-mzk-silver)_88%,transparent)] hover:text-[var(--color-mzk-reactor-white)]'
               }`}
             >
-              VOCAL AI {props.ttsOn ? 'ARMED' : 'MUTE'}
+              TTS {props.ttsOn ? 'ON' : 'OFF'}
             </button>
           </div>
         </div>
@@ -262,20 +262,25 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
               id={controlsHelpTitleId}
               className="border-b border-white/15 pb-2 font-[family-name:var(--font-display)] text-[clamp(0.95rem,3vw,1.15rem)] font-semibold text-[var(--color-mzk-reactor-white)]"
             >
-              Where are controls?
+              HUD map
             </h2>
             <ul className="mt-3 list-inside list-disc space-y-2 leading-relaxed text-white/88">
               <li>
-                <strong className="text-[var(--color-mzk-reactor-white)]">Kaiser command</strong> — hull strip
-                bottom-left; open <strong>Diag</strong> (top-right) or <strong>Bus</strong> for full sequence deck.
+                <strong className="text-[var(--color-mzk-reactor-white)]">Top bar</strong> floats over the hull — uplink, session id, TTS. It does not shrink the 3D stage.
               </li>
               <li>
-                <strong className="text-[var(--color-mzk-reactor-white)]">3D hull</strong> — Cinematic / Diagnostic /
-                Pilot / Fullscreen on the viewport dock; Fit and gear bottom-right.
+                <strong className="text-[var(--color-mzk-reactor-white)]">Kaiser command</strong> — bottom-left deck
+                (directive + Execute). Open <strong>Console</strong> (status strip or deck) for voice log, combat bus,
+                and hull advisories.
               </li>
               <li>
-                <strong className="text-[var(--color-mzk-reactor-white)]">Gauges</strong> — top-right chip opens hull
-                instrument bars without leaving the viewport.
+                <strong className="text-[var(--color-mzk-reactor-white)]">3D hull</strong> — camera preset dropdown and
+                fullscreen on the viewport dock; Fit and gear bottom-right. <strong>Inspector</strong> is a floating chip
+                over the mesh (does not steal canvas height).
+              </li>
+              <li>
+                <strong className="text-[var(--color-mzk-reactor-white)]">Vitals</strong> — PH / SY / TH / AR stay in the
+                compact top-right strip on the hull.
               </li>
             </ul>
             <button
@@ -291,7 +296,7 @@ export function CinematicCockpit(props: CinematicCockpitProps) {
 
       <main
         aria-label="Hull-based twin workspace"
-        className="relative z-[1] mx-auto flex min-h-0 w-full max-w-[min(2560px,100%)] flex-1 flex-col px-0 pb-[max(0.1rem,env(safe-area-inset-bottom,0px))] pt-0 sm:pb-1"
+        className="relative z-[1] mx-auto flex h-full min-h-0 w-full max-w-[min(2560px,100%)] flex-1 flex-col px-0 pb-0 pt-0"
       >
         <ImageAvatarViewer
           hullSurface

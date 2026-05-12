@@ -1625,27 +1625,26 @@ export function SKLModelViewer(props: {
 
           {!hullDockExpanded ?
             <div className="pointer-events-auto flex w-full max-w-[min(100vw,380px)] flex-col items-end gap-1">
-              <div className="flex flex-wrap justify-end gap-1">
-                <CockpitPad
-                  className="text-[clamp(8px,2vw,10px)] px-1.5 py-0.5 font-mono uppercase tracking-[0.08em]"
-                  onClick={() => requestFitAndPreset('cinematic')}
+              <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
+                <label htmlFor="skl-dock-cam-preset" className="sr-only">
+                  Camera preset
+                </label>
+                <select
+                  id="skl-dock-cam-preset"
+                  className={`${SIM_HUD_SELECT} !min-h-[34px] max-w-[min(11rem,46vw)] !py-1 !text-[clamp(8px,2vw,10px)] !font-mono uppercase tracking-[0.06em] pointer-coarse:!min-h-11`}
+                  value={cameraPresetUser ?? experienceToCameraPreset(experienceMode)}
+                  onChange={(e) => requestFitAndPreset(e.target.value as SklViewCameraPresetId)}
                 >
-                  Cinematic
-                </CockpitPad>
+                  <option value="cinematic">Cam · Cinematic</option>
+                  <option value="diagnostic">Cam · Diagnostic</option>
+                  <option value="pilot">Cam · Pilot</option>
+                  <option value="move">Cam · Move</option>
+                </select>
                 <CockpitPad
-                  className="text-[clamp(8px,2vw,10px)] px-1.5 py-0.5 font-mono uppercase tracking-[0.08em]"
-                  onClick={() => requestFitAndPreset('diagnostic')}
+                  className="text-[clamp(8px,2vw,10px)] px-2 py-1 font-mono uppercase tracking-[0.08em] pointer-coarse:min-h-11"
+                  onClick={fullScreenToggle}
                 >
-                  Diagnostic
-                </CockpitPad>
-                <CockpitPad
-                  className="text-[clamp(8px,2vw,10px)] px-1.5 py-0.5 font-mono uppercase tracking-[0.08em]"
-                  onClick={() => requestFitAndPreset('pilot')}
-                >
-                  Pilot
-                </CockpitPad>
-                <CockpitPad className="text-[clamp(8px,2vw,10px)] px-1.5 py-0.5 font-mono uppercase tracking-[0.08em]" onClick={fullScreenToggle}>
-                  Fullscreen
+                  Full
                 </CockpitPad>
               </div>
               <HudActuatorCluster className="gap-1 pr-2" onPointerDown={(e) => e.stopPropagation()}>

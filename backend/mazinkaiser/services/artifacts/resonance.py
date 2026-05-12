@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from difflib import SequenceMatcher
@@ -115,6 +116,22 @@ _RESONANCE_CSV_FIELDS: tuple[str, ...] = (
     "artifact_inspect_json",
     "artifact_nodes_json",
 )
+
+
+def _coerce_publish_scores(raw: Mapping[str, Any]) -> dict[str, float]:
+    """Finite floats only — JSON ``null`` must never appear in ``scores_by_slug`` values."""
+
+    out: dict[str, float] = {}
+    for k, v in raw.items():
+        key = str(k)
+        try:
+            fv = float(v)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            fv = 0.0
+        if not math.isfinite(fv):
+            fv = 0.0
+        out[key] = round(fv, 6)
+    return out
 
 
 def resonance_history_path() -> Path:
@@ -687,20 +704,24 @@ def analyze_publish_resonance(
 
 
     mean = round(sum(vals) / len(vals), 6) if vals else 0.0
+    if not math.isfinite(mean):
+        mean = 0.0
 
 
 
 
     ml_copy = dict(ml) if isinstance(ml, dict) else None
+    if isinstance(ml_copy, dict):
+        ml_copy = _coerce_publish_scores(ml_copy)
 
 
     return PublishResonanceReport(
 
         mean_score=float(mean),
 
-        scores_by_slug=dict(merged),
+        scores_by_slug=_coerce_publish_scores(merged),
 
-        heuristic_by_slug=dict(h),
+        heuristic_by_slug=_coerce_publish_scores(h),
 
         ml_by_slug=ml_copy,
 
@@ -719,17 +740,21 @@ def merge_monitor_into_cove(
 
     out = dict(base_cove)
 
+    mean = float(report.mean_score)
+    if not math.isfinite(mean):
+        mean = 0.0
+
     mon: dict[str, Any] = {
         "schema": _MONITOR_SCHEMA,
         "generated_at": datetime.now(UTC).isoformat(),
-        "mean_resonance": report.mean_score,
-        "scores_by_slug": dict(report.scores_by_slug),
+        "mean_resonance": round(mean, 6),
+        "scores_by_slug": _coerce_publish_scores(report.scores_by_slug),
         "model": dict(report.model_meta),
         "identity": {
             "publisher": "ai_robot.publish_resonance",
-            "artifact_profile": report.model_meta.get("artifact_profile", "generic_ai_robot"),
+            "artifact_profile": str(report.model_meta.get("artifact_profile") or "generic_ai_robot"),
             "action_catalog_source": str(report.model_meta.get("action_catalog_source") or "unknown"),
-            "source_cove_version": base_cove.get("version"),
+            "source_cove_version": base_cove.get("version") if base_cove.get("version") is not None else 0,
             "legacy_publisher_alias": "mazinkaiser.resonance",
         },
     }
@@ -738,28 +763,18 @@ def merge_monitor_into_cove(
     if isinstance(ph, dict):
         mon["primary_hull"] = dict(ph)
 
-
     if isinstance(nodes_doc, dict):
-
-
+        nc_raw = nodes_doc.get("nodeCount")
+        node_count = int(nc_raw) if isinstance(nc_raw, (int, float)) else 0
+        ns = nodes_doc.get("schema")
         mon["hull_topology"] = {
-
-
-            "nodes_schema": nodes_doc.get("schema"),
-
-
-            "node_count": nodes_doc.get("nodeCount"),
-
-
-
+            "nodes_schema": str(ns) if ns is not None else "",
+            "node_count": node_count,
         }
-
-
+    else:
+        mon["hull_topology"] = {"nodes_schema": "", "node_count": 0}
 
     out["monitor"] = mon
-
-
-    
 
     return out
 
@@ -817,11 +832,11 @@ def build_slug_resonance_csv_rows(
 
     ph = report.model_meta.get("primary_hull") or {}
 
-    mecha_scope = str(ph.get("mecha_hull_scope") or "")
+    mecha_scope = str(ph.get("mecha_hull_scope") or "unspecified")
 
-    hull_bind = str(ph.get("hull_binding_mode") or "")
+    hull_bind = str(ph.get("hull_binding_mode") or "unspecified")
 
-    glb_base = str(ph.get("primary_glb_basename") or "")
+    glb_base = str(ph.get("primary_glb_basename") or "unknown")
 
     glb_len = ph.get("primary_glb_byte_length")
 
@@ -849,7 +864,7 @@ def build_slug_resonance_csv_rows(
 
     unified_n = len(unified_cat)
 
-    mode_s = str(report.model_meta.get("mode", "") or "")
+    mode_s = str(report.model_meta.get("mode") or "heuristic")
 
 
 
@@ -1058,7 +1073,10 @@ def write_slug_resonance_csv(path: Path, rows: Sequence[Mapping[str, Any]]) -> P
         for r in rows:
 
 
-            wtr.writerow(dict(r))
+            row_out = {fn: "" if r.get(fn) is None else str(r.get(fn, "")) for fn in _RESONANCE_CSV_FIELDS}
+
+
+            wtr.writerow(row_out)
 
 
 
@@ -1260,7 +1278,7 @@ def write_monitored_publish_cove(
 
 
 
-    gen_iso = str(merged.get("monitor", {}).get("generated_at", ""))
+    gen_iso = str(merged.get("monitor", {}).get("generated_at", "") or datetime.now(UTC).isoformat())
 
 
 

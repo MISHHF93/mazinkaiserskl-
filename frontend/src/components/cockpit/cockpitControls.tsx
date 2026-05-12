@@ -77,11 +77,22 @@ export const SIM_HUD_SELECT =
  * viewer icon rail (Fit / Gear / …) so controls do not overlap.
  */
 export const SIM_HULL_DECK_ANCHOR =
-  'pointer-events-auto absolute z-[105] bottom-[max(0.15rem,env(safe-area-inset-bottom))] left-1.5 right-[7.5rem] max-h-[min(42dvh,480px)] sm:left-2 sm:bottom-2 sm:right-[8rem] md:right-[8.25rem] flex flex-col justify-end'
+  'pointer-events-auto absolute z-[105] bottom-[max(0.15rem,env(safe-area-inset-bottom))] left-1.5 right-[5.75rem] max-h-[min(28dvh,360px)] sm:left-2 sm:bottom-2 sm:right-[6.25rem] md:right-[6.5rem] flex flex-col justify-end'
 
 /** Top-right telemetry chips: stays inside viewport; clear of SKL dock on narrow widths. */
 export const SIM_HUD_METRICS_ANCHOR =
   'absolute z-[105] top-1 right-1 flex max-w-[min(calc(100%-7.25rem),30rem)] flex-wrap justify-end gap-px px-0.5 pt-0.5 sm:top-2 sm:right-2'
+
+/** Full-width top status strip — vitals + context + console (gaming HUD zone A). */
+export const SIM_HUD_TOP_STATUS_STRIP =
+  'pointer-events-auto absolute z-[105] left-2 right-2 top-1 flex max-w-[min(calc(100vw-5.5rem),20rem)] flex-col gap-1 rounded-[3px] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_20%,transparent)] bg-[color-mix(in_srgb,#03050c_62%,transparent)] px-1.5 py-1 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-plasma-ice)_8%,transparent),0_4px_20px_rgba(0,0,0,0.45)] backdrop-blur-md sm:left-auto sm:right-2 sm:top-2 sm:max-w-[22rem]'
+
+/** Vertical rail button for tactical console (zone C). */
+export const SIM_CONSOLE_RAIL_BTN =
+  'flex w-full flex-col items-center justify-center gap-0.5 rounded-[2px] border border-transparent px-1 py-2.5 font-mono text-[8px] font-bold uppercase leading-tight tracking-[0.06em] text-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_72%,white)] transition-[background-color,border-color,color] hover:bg-white/5 pointer-coarse:min-h-[52px]'
+
+export const SIM_CONSOLE_RAIL_BTN_ACTIVE =
+  'border-[color-mix(in_srgb,var(--color-mzk-plasma)_42%,transparent)] bg-[color-mix(in_srgb,var(--color-mzk-plasma)_18%,#05070c)] text-[var(--color-mzk-reactor-white)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-mzk-silver)_12%,transparent)]'
 
 /** SKL viewer controls dock — above hull deck z-index so the rail stays clickable. */
 export const SIM_SKL_VIEWER_DOCK_Z = 'z-[110]'

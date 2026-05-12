@@ -59,6 +59,19 @@ def _write_publish_dir(dst: Path) -> None:
     (dst / "mazinkaiser-move-artifacts.cove.json").write_text(json.dumps(MIN_COVE), encoding="utf-8")
 
 
+def _assert_monitor_tree_has_no_none(obj: object, *, path: str = "$") -> None:
+    """Contract: emitted ``monitor`` JSON must not contain ``null`` (Python ``None``) at any depth."""
+
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            assert v is not None, f"{path}.{k} is None"
+            _assert_monitor_tree_has_no_none(v, path=f"{path}.{k}")
+    elif isinstance(obj, list):
+        for i, x in enumerate(obj):
+            assert x is not None, f"{path}[{i}] is None"
+            _assert_monitor_tree_has_no_none(x, path=f"{path}[{i}]")
+
+
 def test_analyze_resonance_when_no_animation_names() -> None:
     from mazinkaiser.services.artifacts.resonance import analyze_publish_resonance
 
@@ -101,6 +114,7 @@ def test_emit_monitored_cove_appends_history(monkeypatch, tmp_path: Path) -> Non
 
     payload = json.loads(written.read_text(encoding="utf-8"))
     assert "monitor" in payload
+    _assert_monitor_tree_has_no_none(payload["monitor"])
     assert "mean_resonance" in payload["monitor"]
     assert payload["monitor"].get("schema") == "ai-robot/publish-resonance-monitor/1"
     assert payload["monitor"]["identity"].get("publisher") == "ai_robot.publish_resonance"

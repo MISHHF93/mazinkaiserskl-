@@ -73,6 +73,78 @@ export function getSklResonanceScoreForSlug(slug: string): number | undefined {
   return typeof raw === 'number' && Number.isFinite(raw) ? raw : undefined
 }
 
+function normalizeResonanceMonitor(mon: Record<string, unknown>): SklResonanceMonitorWire {
+  const scoresRaw = mon.scores_by_slug
+  const scores_by_slug: Record<string, number> = {}
+  if (typeof scoresRaw === 'object' && scoresRaw !== null && !Array.isArray(scoresRaw)) {
+    for (const [k, v] of Object.entries(scoresRaw as Record<string, unknown>)) {
+      const n = typeof v === 'number' ? v : typeof v === 'string' ? Number.parseFloat(v) : Number.NaN
+      scores_by_slug[k] = Number.isFinite(n) ? n : 0
+    }
+  }
+
+  let mean_resonance = 0
+  const m = mon.mean_resonance
+  if (typeof m === 'number' && Number.isFinite(m)) {
+    mean_resonance = m
+  } else if (typeof m === 'string') {
+    const p = Number.parseFloat(m)
+    if (Number.isFinite(p)) mean_resonance = p
+  }
+
+  const model =
+    typeof mon.model === 'object' && mon.model !== null && !Array.isArray(mon.model)
+      ? (mon.model as Record<string, unknown>)
+      : {}
+  const identity =
+    typeof mon.identity === 'object' && mon.identity !== null && !Array.isArray(mon.identity)
+      ? (mon.identity as Record<string, unknown>)
+      : {}
+
+  const phRaw = mon.primary_hull
+  let primary_hull: SklPrimaryHullWire | undefined
+  if (typeof phRaw === 'object' && phRaw !== null && !Array.isArray(phRaw)) {
+    const ph = phRaw as Record<string, unknown>
+    const bn = ph.primary_glb_basename
+    const bl = ph.primary_glb_byte_length
+    primary_hull = {
+      mecha_hull_scope: typeof ph.mecha_hull_scope === 'string' ? ph.mecha_hull_scope : 'unspecified',
+      hull_binding_mode: typeof ph.hull_binding_mode === 'string' ? ph.hull_binding_mode : 'unspecified',
+      primary_glb_basename: typeof bn === 'string' && bn.trim() !== '' ? bn : 'unknown',
+      primary_glb_byte_length:
+        typeof bl === 'number' && Number.isFinite(bl)
+          ? bl
+          : typeof bl === 'string'
+            ? (() => {
+                const x = Number.parseInt(bl, 10)
+                return Number.isFinite(x) ? x : undefined
+              })()
+            : undefined,
+      inspect_nodes_source_consistent:
+        typeof ph.inspect_nodes_source_consistent === 'boolean' ? ph.inspect_nodes_source_consistent : undefined,
+    }
+    if (primary_hull.primary_glb_byte_length !== undefined && !Number.isFinite(primary_hull.primary_glb_byte_length)) {
+      delete primary_hull.primary_glb_byte_length
+    }
+  }
+
+  const schema =
+    typeof mon.schema === 'string' && mon.schema.trim() !== ''
+      ? mon.schema
+      : 'ai-robot/publish-resonance-monitor/1'
+  const generated_at = typeof mon.generated_at === 'string' ? mon.generated_at : ''
+
+  return {
+    schema,
+    generated_at,
+    mean_resonance,
+    scores_by_slug,
+    model,
+    identity,
+    primary_hull,
+  }
+}
+
 function applySklResonanceMonitor(mon: SklResonanceMonitorWire): void {
   lastResonanceMonitor = mon
 }
@@ -114,7 +186,7 @@ export async function fetchAndApplySklMoveArtifactsCove(url?: string): Promise<b
     }
     lastBatches = Array.isArray(data.batches) ? data.batches : []
     if (data.monitor && typeof data.monitor === 'object') {
-      applySklResonanceMonitor(data.monitor)
+      applySklResonanceMonitor(normalizeResonanceMonitor(data.monitor as Record<string, unknown>))
     }
     if (import.meta.env.DEV) {
       console.info(
@@ -159,7 +231,7 @@ export async function fetchAndApplySklResonanceMonitor(url?: string): Promise<bo
       lastResonanceMonitor = null
       return false
     }
-    applySklResonanceMonitor(mon as SklResonanceMonitorWire)
+    applySklResonanceMonitor(normalizeResonanceMonitor(mon as Record<string, unknown>))
     if (import.meta.env.DEV) {
       console.info(
         `[SKL Resonance] Applied overlay from ${resolved} mean=${String(lastResonanceMonitor?.mean_resonance)}`,
