@@ -25,7 +25,7 @@ import {
 import type { ReactNode, RefObject } from 'react'
 import { Component } from 'react'
 import * as THREE from 'three'
-import { MOUSE } from 'three'
+import { MOUSE, TOUCH } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import type { AvatarPresentation, SklMovePlaybackSnapshot } from '../presentation/types'
 import type { CockpitExperienceMode } from '../../components/cockpit/cockpitExperienceMode'
@@ -476,8 +476,8 @@ function SklCameraTelemetry({
 }
 
 /**
- * Snap orbit pivot to the hull surface under the pointer on double-click only.
- * Wheel zoom uses OrbitControls `zoomToCursor` so dolly aims at the cursor without retargeting each tick.
+ * Snap orbit pivot to the hull surface under the pointer: double-click (mouse) or double-tap (touch).
+ * Wheel / pinch zoom uses OrbitControls `zoomToCursor` so dolly aims at the cursor / pinch midpoint.
  */
 function SklPointerRaycastOrbitFocus({ rootRef }: { rootRef: RefObject<THREE.Group | null> }) {
   const camera = useThree((s) => s.camera)
@@ -517,9 +517,68 @@ function SklPointerRaycastOrbitFocus({ rootRef }: { rootRef: RefObject<THREE.Gro
       focusPivotAtClient(e.clientX, e.clientY)
     }
 
+    /** Double-tap (touch) — same intent as dblclick; ignores drags / pinch gestures via movement + duration caps. */
+    let lastTapMs = 0
+    let lastTapX = 0
+    let lastTapY = 0
+    const touchDown = new Map<
+      number,
+      { t: number; x: number; y: number; maxMove: number; lastX: number; lastY: number }
+    >()
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
+      touchDown.set(e.pointerId, {
+        t: performance.now(),
+        x: e.clientX,
+        y: e.clientY,
+        maxMove: 0,
+        lastX: e.clientX,
+        lastY: e.clientY,
+      })
+    }
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
+      const rec = touchDown.get(e.pointerId)
+      if (!rec) return
+      const d = Math.hypot(e.clientX - rec.lastX, e.clientY - rec.lastY)
+      rec.maxMove += d
+      rec.lastX = e.clientX
+      rec.lastY = e.clientY
+    }
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
+      const rec = touchDown.get(e.pointerId)
+      touchDown.delete(e.pointerId)
+      if (!rec) return
+      const now = performance.now()
+      const tapLen = now - rec.t
+      const totalMove = Math.hypot(e.clientX - rec.x, e.clientY - rec.y)
+      if (tapLen > 280 || totalMove > 22 || rec.maxMove > 28) return
+
+      if (now - lastTapMs < 420 && Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) < 48) {
+        focusPivotAtClient(e.clientX, e.clientY)
+        lastTapMs = 0
+      } else {
+        lastTapMs = now
+        lastTapX = e.clientX
+        lastTapY = e.clientY
+      }
+    }
+
     el.addEventListener('dblclick', onDblClick)
+    el.addEventListener('pointerdown', onPointerDown, { passive: true })
+    el.addEventListener('pointermove', onPointerMove, { passive: true })
+    el.addEventListener('pointerup', onPointerUp, { passive: true })
+    el.addEventListener('pointercancel', onPointerUp, { passive: true })
     return () => {
       el.removeEventListener('dblclick', onDblClick)
+      el.removeEventListener('pointerdown', onPointerDown)
+      el.removeEventListener('pointermove', onPointerMove)
+      el.removeEventListener('pointerup', onPointerUp)
+      el.removeEventListener('pointercancel', onPointerUp)
     }
   }, [gl.domElement, camera, controls, raycaster, rootRef])
   return null
@@ -660,6 +719,8 @@ function SklLoadedModel(props: SklLoadedProps) {
    * imperative updates in layout can be overwritten on the next render and zoom/orbit feels broken).
    */
   const [orbitDistanceLimits, setOrbitDistanceLimits] = useState({ min: 0.02, max: 8000 })
+  /** Phones / tablets: slightly faster orbit + pinch response (still clamped by min/max distance). */
+  const [coarsePointerOrbitMul, setCoarsePointerOrbitMul] = useState(1)
 
   const lighting: SklLightingPresetId = autoRecovery ? 'DIAGNOSTIC' : ext.lightingPreset
   const surface: SklMaterialSurfaceId = autoRecovery ? 'clay' : ext.materialSurface
@@ -815,9 +876,19 @@ function SklLoadedModel(props: SklLoadedProps) {
   ])
 
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const mq = window.matchMedia('(pointer: coarse)')
+    const sync = () => setCoarsePointerOrbitMul(mq.matches ? 1.32 : 1)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  useEffect(() => {
     const c = controlsRef.current
     if (!c) return
     c.mouseButtons = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN }
+    c.touches = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN }
   }, [url])
 
   useEffect(() => {
@@ -841,20 +912,23 @@ function SklLoadedModel(props: SklLoadedProps) {
       <OrbitControls
         ref={controlsRef}
         makeDefault
+        /** Pinch / orbit / pan must hit the WebGL canvas — not only R3F's `events.connected` root. */
+        domElement={gl.domElement}
+        touches={{ ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN }}
         enableRotate
         enableDamping
         dampingFactor={settings.damping}
         enablePan
         enableZoom
-        /** Dollying scales toward cursor (three-stdlib); avoids juggling target each wheel tick. */
+        /** Dollying scales toward cursor (wheel) or pinch midpoint (touch); see three.js OrbitControls. */
         zoomToCursor
         /** World-horizontal pan on Y-up deck (screen-space pan feels misaligned vs grid / forward-back). */
         screenSpacePanning={false}
         minPolarAngle={0.01}
         maxPolarAngle={Math.PI - 0.01}
-        rotateSpeed={1.75}
-        zoomSpeed={2.15}
-        panSpeed={1.65}
+        rotateSpeed={1.75 * coarsePointerOrbitMul}
+        zoomSpeed={2.15 * coarsePointerOrbitMul}
+        panSpeed={1.65 * coarsePointerOrbitMul}
         autoRotate={settings.autoRotate}
         autoRotateSpeed={settings.autoRotateSpeed}
         minDistance={orbitDistanceLimits.min}
@@ -1289,10 +1363,10 @@ export function SKLModelViewer(props: {
         </div>
       ) : null}
 
-      <div className="pointer-events-auto absolute inset-0 min-h-0">
+      <div className="pointer-events-auto absolute inset-0 min-h-0 isolate overscroll-contain">
         <Canvas
           shadows
-          className="block cursor-grab touch-none active:cursor-grabbing"
+          className="block cursor-grab touch-none select-none active:cursor-grabbing"
           style={{ width: '100%', height: '100%', touchAction: 'none' }}
           gl={{
             preserveDrawingBuffer: true,
@@ -1303,6 +1377,7 @@ export function SKLModelViewer(props: {
           dpr={[1, 2]}
           onCreated={({ gl }) => {
             gl.domElement.style.touchAction = 'none'
+            gl.domElement.style.userSelect = 'none'
           }}
         >
           <SklGlbProgressReporter onProg={onGlbProgress} />

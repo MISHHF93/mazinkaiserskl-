@@ -105,8 +105,8 @@ export function ImageAvatarViewer(props: ImageAvatarViewerProps) {
       }`
 
   const hullInnerCrop = hullSurface ?
-    'absolute inset-0 overflow-hidden rounded-lg border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_10%,transparent)]'
-    : 'absolute inset-[3px] overflow-hidden rounded-[1.2rem] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_16%,transparent)] sm:inset-[4px]'
+    'absolute inset-0 overflow-hidden overscroll-contain rounded-lg border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_10%,transparent)]'
+    : 'absolute inset-[3px] overflow-hidden overscroll-contain rounded-[1.2rem] border border-[color-mix(in_srgb,var(--color-mzk-plasma-ice)_16%,transparent)] sm:inset-[4px]'
 
   const twinColumnClass = hullSurface ?
       'relative mx-0 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-clip'
