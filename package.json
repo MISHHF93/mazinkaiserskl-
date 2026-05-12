@@ -2,7 +2,7 @@
   "name": "mazinkaiser-ai",
   "private": true,
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": "22.x"
   },
   "workspaces": [
     "packages/*",
